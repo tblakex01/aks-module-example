@@ -2,16 +2,18 @@
 
 # Data source to get hub VNet information
 data "azurerm_virtual_network" "hub" {
+  count               = var.enable_hub_peering ? 1 : 0
   name                = local.hub_vnet_name
   resource_group_name = var.hub_resource_group_name
 }
 
 # Peering from Spoke to Hub
 resource "azurerm_virtual_network_peering" "spoke_to_hub" {
+  count                     = var.enable_hub_peering ? 1 : 0
   name                      = "peer-${local.vnet_name}-to-${local.hub_vnet_name}"
   resource_group_name       = azurerm_resource_group.aks.name
   virtual_network_name      = azurerm_virtual_network.aks.name
-  remote_virtual_network_id = data.azurerm_virtual_network.hub.id
+  remote_virtual_network_id = data.azurerm_virtual_network.hub[0].id
 
   allow_virtual_network_access = true
   allow_forwarded_traffic      = true
@@ -28,6 +30,7 @@ resource "azurerm_virtual_network_peering" "spoke_to_hub" {
 
 # Peering from Hub to Spoke (requires permissions on hub)
 resource "azurerm_virtual_network_peering" "hub_to_spoke" {
+  count                     = var.enable_hub_peering ? 1 : 0
   name                      = "peer-${local.hub_vnet_name}-to-${local.vnet_name}"
   resource_group_name       = var.hub_resource_group_name
   virtual_network_name      = local.hub_vnet_name

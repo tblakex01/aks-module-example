@@ -8,6 +8,8 @@ resource "azurerm_kubernetes_cluster" "aks" {
   private_cluster_enabled             = true
   private_cluster_public_fqdn_enabled = false
 
+  sku_tier = var.sku_tier # Standard tier for production SLA
+
   default_node_pool {
     name                = "system"
     node_count          = var.node_count
@@ -17,6 +19,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
     enable_auto_scaling = true
     min_count           = 1
     max_count           = 5
+    zones               = ["1", "2", "3"] # Spread across availability zones
 
     only_critical_addons_enabled = true
     enable_node_public_ip        = false
@@ -104,13 +107,14 @@ resource "azurerm_kubernetes_cluster_node_pool" "spark" {
   enable_auto_scaling = true
   min_count           = 4
   max_count           = 10
+  zones               = ["1", "2", "3"] # Spread across availability zones
 
   os_disk_type    = "Managed"
   os_disk_size_gb = 256
 
   ultra_ssd_enabled = false
 
-  enable_host_encryption = false
+  enable_host_encryption = false # Set to true if supported in your subscription
 
   node_labels = {
     "nodepool-type" = "spark"

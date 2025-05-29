@@ -64,10 +64,10 @@ output "subnet_ids" {
 
 output "peering_status" {
   description = "VNet peering status"
-  value = {
-    spoke_to_hub = azurerm_virtual_network_peering.spoke_to_hub.id
-    hub_to_spoke = azurerm_virtual_network_peering.hub_to_spoke.id
-  }
+  value = var.enable_hub_peering ? {
+    spoke_to_hub = azurerm_virtual_network_peering.spoke_to_hub[0].id
+    hub_to_spoke = azurerm_virtual_network_peering.hub_to_spoke[0].id
+  } : null
 }
 
 output "route_table_id" {

@@ -87,8 +87,8 @@ resource "azurerm_key_vault" "aks" {
   resource_group_name        = azurerm_resource_group.aks.name
   tenant_id                  = data.azurerm_client_config.current.tenant_id
   sku_name                   = "standard"
-  soft_delete_retention_days = 7
-  purge_protection_enabled   = false
+  soft_delete_retention_days = 90
+  purge_protection_enabled   = true # Protect against accidental deletion
 
   access_policy {
     tenant_id = data.azurerm_client_config.current.tenant_id

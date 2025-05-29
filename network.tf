@@ -65,10 +65,11 @@ resource "azurerm_private_dns_zone_virtual_network_link" "aks" {
 
 # Link private DNS zone to hub VNet for access from on-premises
 resource "azurerm_private_dns_zone_virtual_network_link" "hub" {
+  count                 = var.enable_hub_peering ? 1 : 0
   name                  = "vnet-link-hub"
   resource_group_name   = azurerm_resource_group.aks.name
   private_dns_zone_name = azurerm_private_dns_zone.aks.name
-  virtual_network_id    = data.azurerm_virtual_network.hub.id
+  virtual_network_id    = data.azurerm_virtual_network.hub[0].id
   registration_enabled  = false
   tags                  = var.tags
 }
