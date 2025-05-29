@@ -56,7 +56,21 @@ output "vnet_id" {
 output "subnet_ids" {
   description = "The IDs of the subnets"
   value = {
-    system = azurerm_subnet.system.id
-    spark  = azurerm_subnet.spark.id
+    system    = azurerm_subnet.system.id
+    spark     = azurerm_subnet.spark.id
+    endpoints = azurerm_subnet.endpoints.id
   }
+}
+
+output "peering_status" {
+  description = "VNet peering status"
+  value = {
+    spoke_to_hub = azurerm_virtual_network_peering.spoke_to_hub.id
+    hub_to_spoke = azurerm_virtual_network_peering.hub_to_spoke.id
+  }
+}
+
+output "route_table_id" {
+  description = "Route table ID for ExpressRoute traffic"
+  value       = azurerm_route_table.aks_expressroute.id
 }

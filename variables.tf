@@ -28,6 +28,12 @@ variable "node_count" {
   default     = 3
 }
 
+variable "hub_resource_group_name" {
+  description = "Name of the hub resource group containing ExpressRoute Gateway"
+  type        = string
+  default     = "rg-network-hub" # Update this with your actual hub RG name
+}
+
 variable "tags" {
   description = "Tags to apply to resources"
   type        = map(string)

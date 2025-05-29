@@ -27,6 +27,45 @@ resource "azurerm_network_security_group" "aks" {
     destination_address_prefix = "*"
   }
 
+  # Allow HTTPS from on-premises and AWS networks
+  security_rule {
+    name                       = "AllowHTTPSFromOnPrem"
+    priority                   = 200
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "443"
+    source_address_prefix      = "10.0.0.0/16"
+    destination_address_prefix = "*"
+  }
+
+  # Allow Oracle DB ports from on-premises and AWS networks
+  security_rule {
+    name                       = "AllowOracleFromOnPrem"
+    priority                   = 210
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_ranges    = ["1521", "1522"]
+    source_address_prefix      = "10.0.0.0/16"
+    destination_address_prefix = "*"
+  }
+
+  # Allow hub VNet traffic for ExpressRoute connectivity
+  security_rule {
+    name                       = "AllowHubVNetInBound"
+    priority                   = 220
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "10.248.0.0/23"
+    destination_address_prefix = "*"
+  }
+
   security_rule {
     name                       = "DenyAllInBound"
     priority                   = 4096

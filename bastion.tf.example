@@ -1,0 +1,107 @@
+# Example: Bastion host for accessing private AKS cluster
+# Rename to bastion.tf to use
+
+# Subnet for bastion host
+resource "azurerm_subnet" "bastion" {
+  name                 = "AzureBastionSubnet" # Must be named exactly this for Azure Bastion
+  resource_group_name  = azurerm_resource_group.aks.name
+  virtual_network_name = azurerm_virtual_network.aks.name
+  address_prefixes     = ["10.248.2.0/26"] # 64 IPs for bastion
+}
+
+# Public IP for Azure Bastion
+resource "azurerm_public_ip" "bastion" {
+  name                = "pip-bastion-${var.cluster_name}"
+  location            = azurerm_resource_group.aks.location
+  resource_group_name = azurerm_resource_group.aks.name
+  allocation_method   = "Static"
+  sku                 = "Standard"
+  tags                = var.tags
+}
+
+# Azure Bastion Host
+resource "azurerm_bastion_host" "aks" {
+  name                = "bastion-${var.cluster_name}"
+  location            = azurerm_resource_group.aks.location
+  resource_group_name = azurerm_resource_group.aks.name
+  sku                 = "Basic"
+  tags                = var.tags
+
+  ip_configuration {
+    name                 = "configuration"
+    subnet_id            = azurerm_subnet.bastion.id
+    public_ip_address_id = azurerm_public_ip.bastion.id
+  }
+}
+
+# Alternative: Simple Jump Box VM
+resource "azurerm_subnet" "jumpbox" {
+  name                 = "subnet-jumpbox"
+  resource_group_name  = azurerm_resource_group.aks.name
+  virtual_network_name = azurerm_virtual_network.aks.name
+  address_prefixes     = ["10.248.3.0/28"] # 16 IPs
+}
+
+resource "azurerm_network_interface" "jumpbox" {
+  name                = "nic-jumpbox"
+  location            = azurerm_resource_group.aks.location
+  resource_group_name = azurerm_resource_group.aks.name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.jumpbox.id
+    private_ip_address_allocation = "Dynamic"
+  }
+}
+
+resource "azurerm_linux_virtual_machine" "jumpbox" {
+  name                = "vm-jumpbox-${var.cluster_name}"
+  location            = azurerm_resource_group.aks.location
+  resource_group_name = azurerm_resource_group.aks.name
+  size                = "Standard_B2s"
+  admin_username      = "azureuser"
+
+  admin_ssh_key {
+    username   = "azureuser"
+    public_key = file("~/.ssh/id_rsa.pub") # Update with your SSH public key path
+  }
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Premium_LRS"
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "22_04-lts-gen2"
+    version   = "latest"
+  }
+
+  network_interface_ids = [
+    azurerm_network_interface.jumpbox.id,
+  ]
+
+  # Install Azure CLI and kubectl
+  custom_data = base64encode(<<-EOF
+    #!/bin/bash
+    # Install Azure CLI
+    curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+    
+    # Install kubectl
+    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+    
+    # Install Helm
+    curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  EOF
+  )
+
+  tags = var.tags
+}
+
+# Output for connecting
+output "jumpbox_connection_command" {
+  value = "az network bastion ssh --name ${azurerm_bastion_host.aks.name} --resource-group ${azurerm_resource_group.aks.name} --target-resource-id ${azurerm_linux_virtual_machine.jumpbox.id} --auth-type ssh-key --username azureuser --ssh-key ~/.ssh/id_rsa"
+  description = "Command to connect to jumpbox via Azure Bastion"
+}
