@@ -217,12 +217,37 @@ When `enable_expressroute = true`, the cluster:
 - Uses hub's ExpressRoute gateway
 - Routes on-premises traffic through ExpressRoute
 
+## 🧪 Testing
+
+This project includes comprehensive testing using Terratest. Tests validate the infrastructure configuration and deployment.
+
+### Running Tests
+
+```bash
+# Run unit tests (no Azure resources)
+cd test
+go test -v -timeout 30m ./unit/...
+
+# Run integration tests (deploys real resources)
+export RUN_INTEGRATION_TESTS=true
+go test -v -timeout 60m ./integration/...
+```
+
+### Test Categories
+
+- **Unit Tests**: Validate Terraform configuration without deploying
+- **Integration Tests**: Deploy and validate real Azure resources
+- **Security Scans**: Automated security checks with Checkov and tfsec
+
+See [test/README.md](test/README.md) for detailed testing documentation.
+
 ## 📚 Additional Resources
 
 - [ACCESS_GUIDE.md](ACCESS_GUIDE.md) - Detailed access instructions
 - [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) - Pre-deployment checklist
 - [EXPRESSROUTE_SETUP.md](EXPRESSROUTE_SETUP.md) - ExpressRoute configuration guide
 - [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) - Production deployment guide
+- [test/README.md](test/README.md) - Testing guide and documentation
 
 ## 🤝 Contributing
 
