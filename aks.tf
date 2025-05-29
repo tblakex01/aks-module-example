@@ -102,7 +102,7 @@ resource "azurerm_kubernetes_cluster_node_pool" "spark" {
   mode = "User"
 
   enable_auto_scaling = true
-  min_count           = 1
+  min_count           = 4
   max_count           = 10
 
   os_disk_type    = "Managed"
@@ -116,7 +116,7 @@ resource "azurerm_kubernetes_cluster_node_pool" "spark" {
     "nodepool-type" = "spark"
     "environment"   = "production"
     "workload-type" = "apache-spark"
-    "compute-type"  = "memory-optimized"
+    "compute-type"  = "general-purpose"
   }
 
   node_taints = [
