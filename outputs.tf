@@ -1,41 +1,40 @@
 output "cluster_id" {
   description = "The Kubernetes Cluster ID"
-  value       = azurerm_kubernetes_cluster.aks.id
+  value       = module.aks.cluster_id
 }
 
 output "cluster_name" {
   description = "The name of the AKS cluster"
-  value       = azurerm_kubernetes_cluster.aks.name
+  value       = module.aks.cluster_name
 }
 
 output "cluster_fqdn" {
   description = "The FQDN of the Azure Kubernetes Managed Cluster"
-  value       = azurerm_kubernetes_cluster.aks.fqdn
+  value       = module.aks.cluster_fqdn
 }
 
 output "cluster_private_fqdn" {
   description = "The FQDN for the AKS cluster when private link has been enabled"
-  value       = azurerm_kubernetes_cluster.aks.private_fqdn
+  value       = module.aks.cluster_private_fqdn
 }
 
-output "kube_admin_config_raw" {
-  description = "Raw Kubernetes config for administrative access"
-  value       = azurerm_kubernetes_cluster.aks.kube_admin_config_raw
+output "kube_config_raw" {
+  description = "Raw Kubernetes config"
+  value       = module.aks.kube_config_raw
   sensitive   = true
 }
 
 output "cluster_identity" {
   description = "The managed identity of the AKS cluster"
   value = {
-    type         = azurerm_kubernetes_cluster.aks.identity[0].type
-    principal_id = azurerm_kubernetes_cluster.aks.identity[0].principal_id
-    tenant_id    = azurerm_kubernetes_cluster.aks.identity[0].tenant_id
+    principal_id = module.aks.identity_principal_id
+    tenant_id    = module.aks.identity_tenant_id
   }
 }
 
 output "node_resource_group" {
   description = "The name of the Resource Group where the Kubernetes Nodes reside"
-  value       = azurerm_kubernetes_cluster.aks.node_resource_group
+  value       = module.aks.node_resource_group
 }
 
 output "log_analytics_workspace_id" {
