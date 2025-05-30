@@ -213,7 +213,7 @@ resource "azurerm_key_vault" "aks" {
 
 # AKS Cluster using the module
 module "aks" {
-  source = "./modules/aks"
+  source = "../../modules/aks"
 
   cluster_name        = var.cluster_name
   location            = azurerm_resource_group.aks.location

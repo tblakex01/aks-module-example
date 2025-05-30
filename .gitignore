@@ -12,6 +12,13 @@ override.tf.json
 *_override.tf.json
 .terraformrc
 terraform.rc
+plan-output.txt
+
+# Terraform variable files (may contain sensitive data)
+*.tfvars
+*.tfvars.json
+# But include environment-specific tfvars
+!envs/*/terraform.tfvars
 
 # Test artifacts
 test/vendor/
@@ -51,3 +58,11 @@ logs/
 # Temporary files
 tmp/
 temp/
+
+# Claude AI
+.claude/
+
+# Node.js (if using npm tools)
+node_modules/
+package-lock.json
+package.json
