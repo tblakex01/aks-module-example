@@ -11,18 +11,16 @@ resource "azurerm_kubernetes_cluster" "aks" {
   sku_tier = var.sku_tier
 
   default_node_pool {
-    name                = var.system_node_pool.name
-    node_count          = var.system_node_pool.node_count
-    vm_size             = var.system_node_pool.vm_size
-    vnet_subnet_id      = var.system_node_pool.subnet_id
-    type                = "VirtualMachineScaleSets"
-    enable_auto_scaling = var.system_node_pool.enable_auto_scaling
-    min_count           = var.system_node_pool.min_count
-    max_count           = var.system_node_pool.max_count
-    zones               = var.system_node_pool.availability_zones
+    name           = var.system_node_pool.name
+    node_count     = var.system_node_pool.enable_auto_scaling ? null : var.system_node_pool.node_count
+    vm_size        = var.system_node_pool.vm_size
+    vnet_subnet_id = var.system_node_pool.subnet_id
+    type           = "VirtualMachineScaleSets"
+    min_count      = var.system_node_pool.enable_auto_scaling ? var.system_node_pool.min_count : null
+    max_count      = var.system_node_pool.enable_auto_scaling ? var.system_node_pool.max_count : null
+    zones          = var.system_node_pool.availability_zones
 
     only_critical_addons_enabled = var.system_node_pool.only_critical_addons_enabled
-    enable_node_public_ip        = false
 
     os_disk_type    = var.system_node_pool.os_disk_type
     os_disk_size_gb = var.system_node_pool.os_disk_size_gb
@@ -57,7 +55,6 @@ resource "azurerm_kubernetes_cluster" "aks" {
   }
 
   azure_active_directory_role_based_access_control {
-    managed            = var.azure_ad_rbac.managed
     azure_rbac_enabled = var.azure_ad_rbac.azure_rbac_enabled
     tenant_id          = var.azure_ad_rbac.tenant_id
   }
@@ -92,8 +89,6 @@ resource "azurerm_kubernetes_cluster" "aks" {
     }
   }
 
-  automatic_channel_upgrade = var.automatic_channel_upgrade
-
   tags = var.tags
 }
 
@@ -103,22 +98,19 @@ resource "azurerm_kubernetes_cluster_node_pool" "additional" {
   name                  = each.value.name
   kubernetes_cluster_id = azurerm_kubernetes_cluster.aks.id
   vm_size               = each.value.vm_size
-  node_count            = each.value.node_count
+  node_count            = each.value.enable_auto_scaling ? null : each.value.node_count
   vnet_subnet_id        = each.value.subnet_id
 
   mode = each.value.mode
 
-  enable_auto_scaling = each.value.enable_auto_scaling
-  min_count           = each.value.min_count
-  max_count           = each.value.max_count
-  zones               = each.value.availability_zones
+  min_count = each.value.enable_auto_scaling ? each.value.min_count : null
+  max_count = each.value.enable_auto_scaling ? each.value.max_count : null
+  zones     = each.value.availability_zones
 
   os_disk_type    = each.value.os_disk_type
   os_disk_size_gb = each.value.os_disk_size_gb
 
   ultra_ssd_enabled = each.value.ultra_ssd_enabled
-
-  enable_host_encryption = each.value.enable_host_encryption
 
   node_labels = each.value.node_labels
 
