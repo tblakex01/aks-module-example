@@ -20,4 +20,3 @@ tags = {
   Purpose     = "Pre-production Testing"
   Owner       = "QA Team"
 }
-EOF < /dev/null
