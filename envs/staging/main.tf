@@ -98,7 +98,7 @@ resource "azurerm_network_security_group" "aks" {
     protocol                   = "*"
     source_port_range          = "*"
     destination_port_range     = "*"
-    source_address_prefix      = "10.248.0.0/23"
+    source_address_prefix      = "10.0.0.0/16"
     destination_address_prefix = "*"
   }
 
@@ -280,8 +280,8 @@ module "aks" {
   network_profile = {
     network_plugin = "azure"
     network_policy = "azure"
-    dns_service_ip = "10.250.0.10"
-    service_cidr   = "10.250.0.0/16"
+    dns_service_ip = "10.0.0.10"
+    service_cidr   = "10.0.0.0/16"
     outbound_type  = "loadBalancer"
     load_balancer_profile = {
       managed_outbound_ip_count = 2

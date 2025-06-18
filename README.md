@@ -138,10 +138,10 @@ aks-cluster/
 ### Network Configuration
 
 The cluster uses the following network architecture:
-- **VNet CIDR**: 10.0.0.1/24
-- **System Subnet**: 10.0.0.2/24
-- **Spark Subnet**: 10.248.27.64/24
-- **Private Endpoints**: 10.248.27.128/24
+- **VNet CIDR**: 10.0.0.0/24
+- **System Subnet**: 10.0.1.0/26
+- **Spark Subnet**: 10.0.2.0/25
+- **Private Endpoints**: 10.0.3.0/25
 - **Service CIDR**: 10.0.0.0/16
 
 ### Spark Optimization

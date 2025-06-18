@@ -34,7 +34,16 @@ Each environment has its own directory under `envs/` containing:
   - Free SKU tier for cost savings
   - Smaller VM sizes (D2s_v3 for system, D4s_v3 for Spark)
   - Minimal node counts (1-3 nodes)
-  - Separate VNet range: 10.248.25.0/24
+  - Separate VNet range: 10.0.1.0/24
+
+### QA Environment
+- **Purpose**: Quality assurance and testing
+- **Location**: `envs/qa/`
+- **Characteristics**:
+  - Standard SKU tier for testing
+  - Small VM sizes (D2s_v3 for system, D4s_v3 for Spark)
+  - Minimal node counts (1-3 nodes)
+  - Separate VNet range: 10.0.2.0/24
 
 ### Staging Environment
 - **Purpose**: Pre-production testing and validation
@@ -43,7 +52,7 @@ Each environment has its own directory under `envs/` containing:
   - Standard SKU tier for reliability testing
   - Medium VM sizes (D4s_v3 for system, D8s_v3 for Spark)
   - Moderate node counts (2-5 nodes)
-  - Separate VNet range: 10.248.26.0/24
+  - Separate VNet range: 10.0.3.0/24
 
 ### Production Environment
 - **Purpose**: Production workloads
@@ -52,7 +61,7 @@ Each environment has its own directory under `envs/` containing:
   - Standard SKU tier with SLA
   - Production VM sizes (D8s_v3 for both system and Spark)
   - Production node counts (3-10 nodes)
-  - Production VNet range: 10.248.27.0/24
+  - Production VNet range: 10.0.4.0/24
   - ExpressRoute connectivity ready
 
 ## Deployment Workflow

@@ -25,21 +25,21 @@ resource "azurerm_virtual_network" "spark" {
   name                = "vnet-${local.cluster_name}"
   location            = azurerm_resource_group.spark.location
   resource_group_name = azurerm_resource_group.spark.name
-  address_space       = ["10.2.0.0/16"]
+  address_space       = ["10.0.1.0/24"]
 }
 
 resource "azurerm_subnet" "system" {
   name                 = "subnet-system"
   resource_group_name  = azurerm_resource_group.spark.name
   virtual_network_name = azurerm_virtual_network.spark.name
-  address_prefixes     = ["10.2.1.0/24"]
+  address_prefixes     = ["10.0.2.0/26"]
 }
 
 resource "azurerm_subnet" "spark" {
   name                 = "subnet-spark"
   resource_group_name  = azurerm_resource_group.spark.name
   virtual_network_name = azurerm_virtual_network.spark.name
-  address_prefixes     = ["10.2.2.0/24"]
+  address_prefixes     = ["10.0.3.0/25"]
 }
 
 resource "azurerm_log_analytics_workspace" "spark" {
@@ -143,8 +143,8 @@ module "aks_spark" {
   network_profile = {
     network_plugin = "azure"
     network_policy = "azure"
-    dns_service_ip = "10.250.0.10"
-    service_cidr   = "10.250.0.0/16"
+    dns_service_ip = "10.0.0.10"
+    service_cidr   = "10.0.0.0/16"
     outbound_type  = "loadBalancer"
     load_balancer_profile = {
       managed_outbound_ip_count = 4 # More IPs for high throughput

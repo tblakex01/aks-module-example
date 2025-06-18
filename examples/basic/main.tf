@@ -15,14 +15,14 @@ resource "azurerm_virtual_network" "example" {
   name                = "vnet-aks-example"
   location            = azurerm_resource_group.example.location
   resource_group_name = azurerm_resource_group.example.name
-  address_space       = ["10.1.0.0/16"]
+  address_space       = ["10.0.1.0/24"]
 }
 
 resource "azurerm_subnet" "system" {
   name                 = "subnet-system"
   resource_group_name  = azurerm_resource_group.example.name
   virtual_network_name = azurerm_virtual_network.example.name
-  address_prefixes     = ["10.1.0.0/24"]
+  address_prefixes     = ["10.0.2.0/26"]
 }
 
 module "aks" {
@@ -54,8 +54,8 @@ module "aks" {
   network_profile = {
     network_plugin = "azure"
     network_policy = "azure"
-    dns_service_ip = "10.250.0.10"
-    service_cidr   = "10.250.0.0/16"
+    dns_service_ip = "10.0.0.10"
+    service_cidr   = "10.0.0.0/16"
     outbound_type  = "loadBalancer"
   }
 

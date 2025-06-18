@@ -7,7 +7,7 @@ This AKS cluster is configured to route all internal traffic (10.0.0.0/16) throu
 ## Architecture
 
 ```
-On-Premises/AWS ←→ ExpressRoute ←→ Hub VNet (10.248.0.0/23) ←→ AKS Spoke VNet (10.248.27.0/24)
+On-Premises/AWS ←→ ExpressRoute ←→ Hub VNet (10.0.5.0/23) ←→ AKS Spoke VNets (10.0.1.0/24 - 10.0.4.0/24)
                                           ↓
                                    ExpressRoute Gateway
 ```
@@ -15,12 +15,13 @@ On-Premises/AWS ←→ ExpressRoute ←→ Hub VNet (10.248.0.0/23) ←→ AKS S
 ## Key Components
 
 ### 1. Network Addressing
-- **AKS VNet**: 10.248.27.0/24 (spoke)
-  - System subnet: 10.248.27.0/26 (64 IPs)
-  - Spark subnet: 10.248.27.64/26 (64 IPs)
-  - Endpoints subnet: 10.248.27.128/27 (32 IPs)
-- **Hub VNet**: 10.248.0.0/23 (existing)
-- **Service CIDR**: 10.250.0.0/16 (Kubernetes services)
+- **AKS Spoke VNets**: Environment-specific addressing
+  - Dev: 10.0.1.0/24 (system: 10.0.1.0/26, spark: 10.0.1.64/26, endpoints: 10.0.1.128/26)
+  - QA: 10.0.2.0/24 (system: 10.0.2.0/26, spark: 10.0.2.64/26, endpoints: 10.0.2.128/26)
+  - Staging: 10.0.3.0/24 (system: 10.0.3.0/26, spark: 10.0.3.64/26, endpoints: 10.0.3.128/26)
+  - Prod: 10.0.4.0/24 (system: 10.0.4.0/26, spark: 10.0.4.64/26, endpoints: 10.0.4.128/26)
+- **Hub VNet**: 10.0.5.0/23 (existing)
+- **Service CIDR**: 10.0.0.0/16 (Kubernetes services)
 
 ### 2. VNet Peering
 - Bidirectional peering between hub and spoke
@@ -35,7 +36,7 @@ On-Premises/AWS ←→ ExpressRoute ←→ Hub VNet (10.248.0.0/23) ←→ AKS S
 ### 4. Network Security Group Rules
 - Port 443 (HTTPS) from 10.0.0.0/16
 - Ports 1521-1522 (Oracle) from 10.0.0.0/16
-- All traffic from hub VNet (10.248.0.0/23)
+- All traffic from hub VNet (10.0.5.0/23)
 - Standard AKS requirements (VNet, Azure LB)
 
 ### 5. DNS Configuration
@@ -85,8 +86,8 @@ After deployment:
    ```bash
    kubectl run test-pod --image=busybox -it --rm -- /bin/sh
    # Inside pod:
-   ping 10.0.0.1  # Should route via ExpressRoute
-   traceroute 10.0.0.1
+   ping 10.0.5.1  # Should route via ExpressRoute to hub
+   traceroute 10.0.5.1
    ```
 
 ## Troubleshooting
