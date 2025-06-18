@@ -2,6 +2,26 @@
 
 This repository contains Terraform configuration for deploying a production-grade Azure Kubernetes Service (AKS) cluster optimized for Apache Spark workloads. The infrastructure is designed with enterprise-level security, monitoring, and performance optimizations.
 
+## Table of Contents
+- [Features](#-features)
+- [Prerequisites](#-prerequisites)
+- [Quick Start](#-quick-start)
+- [Terraform State Management](#terraform-state-management)
+- [Project Structure](#-project-structure)
+- [Configuration](#-configuration)
+- [Security](#-security)
+- [Monitoring](#-monitoring)
+- [Cost Estimation](#-cost-estimation)
+- [Maintenance](#-maintenance)
+- [Outputs](#-outputs)
+- [Integration](#-integration)
+- [Testing](#-testing)
+- [Additional Resources](#-additional-resources)
+- [Contributing](#-contributing)
+- [License](#-license)
+- [Built With](#-built-with)
+- [Acknowledgments](#-acknowledgments)
+
 ## 🚀 Features
 
 ### Core Infrastructure
@@ -65,6 +85,23 @@ terraform plan
 ```bash
 terraform apply
 ```
+
+## Terraform State Management
+
+We recommend using a remote backend to store Terraform state so collaborators and CI workflows can safely share state. A common approach is to use an Azure Storage account with the `azurerm` backend:
+
+```hcl
+terraform {
+  backend "azurerm" {
+    resource_group_name  = "<state-rg>"
+    storage_account_name = "<stateaccount>"
+    container_name       = "tfstate"
+    key                  = "aks/terraform.tfstate"
+  }
+}
+```
+
+Ensure the storage account and container exist and that you have access before running `terraform init`.
 
 ## 📁 Project Structure
 
@@ -223,6 +260,14 @@ This project includes comprehensive testing using Terratest. Tests validate the 
 
 ### Running Tests
 
+Before running integration tests you must authenticate to Azure. You can either log in with the Azure CLI:
+
+```bash
+az login
+az account set --subscription <your-subscription-id>
+```
+
+or export service principal credentials using the `ARM_CLIENT_ID`, `ARM_CLIENT_SECRET`, `ARM_TENANT_ID`, and `ARM_SUBSCRIPTION_ID` environment variables.
 ```bash
 # Run unit tests (no Azure resources)
 cd test
@@ -272,3 +317,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Azure Kubernetes Service documentation
 - Terraform AzureRM provider documentation
 - Apache Spark on Kubernetes best practices
+
