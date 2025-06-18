@@ -9,13 +9,13 @@
 - ✅ **SKU Tier**: Standard (Production SLA)
 
 ### Network Configuration
-- ✅ **VNet**: 10.248.27.0/24
+- ✅ **VNet**: 10.0.1.0/24
 - ✅ **Subnets**:
-  - System: 10.248.27.0/26
-  - Spark: 10.248.27.64/26
-  - Endpoints: 10.248.27.128/27
-- ✅ **Service CIDR**: 10.250.0.0/16
-- ✅ **DNS Service IP**: 10.250.0.10
+  - System: 10.0.2.0/26
+  - Spark: 10.0.3.0/25
+  - Endpoints: 10.0.4.0/25
+- ✅ **Service CIDR**: 10.0.0.0/16
+- ✅ **DNS Service IP**: 10.0.0.10
 
 ### Node Pools
 - ✅ **System Pool**:

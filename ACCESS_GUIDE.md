@@ -131,11 +131,11 @@ spec:
 
 ## Network Connectivity Summary
 
-- **Cluster API Endpoint**: Private only (10.248.x.x range)
-- **Service CIDR**: 10.250.0.0/16
-- **DNS Service IP**: 10.250.0.10
-- **System Nodes**: 10.248.0.0/24
-- **Spark Nodes**: 10.248.1.0/25
+- **Cluster API Endpoint**: Private only (10.x.x.x range)
+- **Service CIDR**: 10.0.0.0/16
+- **DNS Service IP**: 10.0.0.10
+- **System Nodes**: 10.0.1.0/24
+- **Spark Nodes**: 10.0.2.0/25
 
 ## Security Considerations
 

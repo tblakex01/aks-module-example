@@ -99,7 +99,7 @@ run_command_enabled = false  # Disable for production
    - Ensure on-premises DNS can resolve Azure private zones
 
 3. **IP Address Management**
-   - Verify no IP conflicts with 10.248.27.0/24
+   - Verify no IP conflicts with 10.0.0.0/24
    - Document IP allocation for future growth
 
 ## 📋 Pre-deployment Checklist

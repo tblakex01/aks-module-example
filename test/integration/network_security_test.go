@@ -61,7 +61,7 @@ func validateNetworkConfiguration(t *testing.T, terraformOptions *terraform.Opti
 	assert.NotNil(t, vnet)
 
 	// Validate address space
-	assert.Contains(t, vnet.Properties.AddressSpace.AddressPrefixes, "10.248.27.0/24")
+	assert.Contains(t, vnet.Properties.AddressSpace.AddressPrefixes, "10.0.0.0/24")
 
 	// Validate subnets
 	subnets := vnet.Properties.Subnets
@@ -83,11 +83,11 @@ func validateSubnets(t *testing.T, subnets []*armnetwork.Subnet, systemSubnetID,
 	for _, subnet := range subnets {
 		switch *subnet.Name {
 		case systemSubnetName:
-			assert.Equal(t, "10.248.27.0/26", *subnet.Properties.AddressPrefix)
+			assert.Equal(t, "10.0.1.0/26", *subnet.Properties.AddressPrefix)
 		case sparkSubnetName:
-			assert.Equal(t, "10.248.27.64/26", *subnet.Properties.AddressPrefix)
+			assert.Equal(t, "10.0.2.0/25", *subnet.Properties.AddressPrefix)
 		case "snet-aks-endpoints":
-			assert.Equal(t, "10.248.27.128/27", *subnet.Properties.AddressPrefix)
+			assert.Equal(t, "10.0.3.0/25", *subnet.Properties.AddressPrefix)
 		}
 	}
 }

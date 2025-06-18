@@ -1,6 +1,6 @@
 locals {
   vnet_name          = "vnet-aks-spark-staging"
-  vnet_address_space = ["10.248.26.0/24"] # Staging environment range
+  vnet_address_space = ["10.0.1.0/24"] # Staging environment range
 
   # Hub VNet configuration for ExpressRoute connectivity
   hub_vnet_name = "net-eastus-hub"
@@ -13,15 +13,15 @@ locals {
   subnets = {
     system = {
       name             = "subnet-aks-system"
-      address_prefixes = ["10.248.26.0/26"] # /26 = 64 IPs for system nodes
+      address_prefixes = ["10.0.2.0/26"] # /26 = 64 IPs for system nodes
     }
     spark = {
       name             = "subnet-aks-spark"
-      address_prefixes = ["10.248.26.64/26"] # /26 = 64 IPs for spark nodes
+      address_prefixes = ["10.0.3.0/25"] # /25 = 128 IPs for spark nodes
     }
     endpoints = {
       name             = "subnet-endpoints"
-      address_prefixes = ["10.248.26.128/27"] # /27 = 32 IPs for private endpoints
+      address_prefixes = ["10.0.4.0/25"] # /25 = 128 IPs for private endpoints
     }
   }
 }

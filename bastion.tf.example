@@ -6,7 +6,7 @@ resource "azurerm_subnet" "bastion" {
   name                 = "AzureBastionSubnet" # Must be named exactly this for Azure Bastion
   resource_group_name  = azurerm_resource_group.aks.name
   virtual_network_name = azurerm_virtual_network.aks.name
-  address_prefixes     = ["10.248.2.0/26"] # 64 IPs for bastion
+  address_prefixes     = ["10.0.4.0/26"] # 64 IPs for bastion
 }
 
 # Public IP for Azure Bastion
@@ -39,7 +39,7 @@ resource "azurerm_subnet" "jumpbox" {
   name                 = "subnet-jumpbox"
   resource_group_name  = azurerm_resource_group.aks.name
   virtual_network_name = azurerm_virtual_network.aks.name
-  address_prefixes     = ["10.248.3.0/28"] # 16 IPs
+  address_prefixes     = ["10.0.4.64/28"] # 16 IPs
 }
 
 resource "azurerm_network_interface" "jumpbox" {
