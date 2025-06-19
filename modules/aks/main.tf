@@ -110,7 +110,8 @@ resource "azurerm_kubernetes_cluster_node_pool" "additional" {
   os_disk_type    = each.value.os_disk_type
   os_disk_size_gb = each.value.os_disk_size_gb
 
-  ultra_ssd_enabled = each.value.ultra_ssd_enabled
+  ultra_ssd_enabled       = each.value.ultra_ssd_enabled
+  host_encryption_enabled = each.value.enable_host_encryption
 
   node_labels = each.value.node_labels
 
