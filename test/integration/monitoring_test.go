@@ -69,7 +69,7 @@ func validateLogAnalyticsWorkspace(t *testing.T, ctx context.Context, cred *azid
 	assert.NotNil(t, workspace)
 
 	// Validate workspace properties
-	assert.Equal(t, armoperationalinsights.WorkspaceSkuNameEnumPerGB2018, *workspace.Properties.SKU.Name)
+	assert.Equal(t, armoperationalinsights.WorkspaceSKUNameEnumPerGB2018, *workspace.Properties.SKU.Name)
 	assert.Equal(t, int32(30), *workspace.Properties.RetentionInDays)
 	assert.Equal(t, armoperationalinsights.PublicNetworkAccessTypeEnabled, *workspace.Properties.PublicNetworkAccessForIngestion)
 }
@@ -82,7 +82,7 @@ func validateContainerInsights(t *testing.T, ctx context.Context, cred *azidenti
 
 	// List diagnostic settings for the AKS cluster
 	pager := diagnosticClient.NewListPager(clusterID, nil)
-	
+
 	hasContainerInsights := false
 	for pager.More() {
 		page, err := pager.NextPage(ctx)
@@ -91,7 +91,7 @@ func validateContainerInsights(t *testing.T, ctx context.Context, cred *azidenti
 			t.Logf("Warning: Could not retrieve diagnostic settings: %v", err)
 			return
 		}
-		
+
 		if page.Value != nil && len(page.Value) > 0 {
 			hasContainerInsights = true
 			break

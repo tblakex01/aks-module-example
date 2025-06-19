@@ -8,6 +8,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v5"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/privatedns/armprivatedns"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -106,12 +107,12 @@ func validateNetworkSecurityGroup(t *testing.T, ctx context.Context, cred *azide
 
 	// List NSGs in resource group
 	pager := nsgClient.NewListPager(resourceGroupName, nil)
-	
+
 	var nsg *armnetwork.SecurityGroup
 	for pager.More() {
 		page, err := pager.NextPage(ctx)
 		require.NoError(t, err)
-		
+
 		if len(page.Value) > 0 {
 			nsg = page.Value[0]
 			break
@@ -128,7 +129,7 @@ func validateNetworkSecurityGroup(t *testing.T, ctx context.Context, cred *azide
 	// Check for specific rules
 	hasHTTPSRule := false
 	hasDenyAllRule := false
-	
+
 	for _, rule := range rules {
 		if *rule.Properties.DestinationPortRange == "443" && *rule.Properties.Access == armnetwork.SecurityRuleAccessAllow {
 			hasHTTPSRule = true
@@ -225,7 +226,7 @@ func TestPrivateDNSZone(t *testing.T) {
 	subscriptionID := strings.Split(privateDNSZoneID, "/")[2]
 
 	// Create Private DNS Zone client
-	dnsClient, err := armnetwork.NewPrivateZonesClient(subscriptionID, cred, nil)
+	dnsClient, err := armprivatedns.NewPrivateZonesClient(subscriptionID, cred, nil)
 	require.NoError(t, err)
 
 	// Get DNS zone name from ID
@@ -235,7 +236,7 @@ func TestPrivateDNSZone(t *testing.T) {
 	dnsZone, err := dnsClient.Get(ctx, resourceGroupName, dnsZoneName, nil)
 	require.NoError(t, err)
 	assert.NotNil(t, dnsZone)
-	
+
 	// Validate the zone name contains the expected pattern
 	assert.Contains(t, *dnsZone.Name, "privatelink")
 	assert.Contains(t, *dnsZone.Name, "azmk8s.io")
