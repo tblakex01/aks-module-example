@@ -33,8 +33,8 @@ This repository contains Terraform configuration for deploying a production-grad
 
 ### Node Pools
 - **System Pool**: Dedicated for Kubernetes system components (1-5 nodes)
-- **Spark Pool**: Isolated pool for Apache Spark workloads (4-10 nodes)
-- **Node Taints**: Ensures Spark workloads run on dedicated nodes
+- **Spark Pool**: Isolated pool for Apache Spark workloads (4-10 nodes), with support for both regular and Spot instances.
+- **Node Taints**: Ensures Spark workloads run on dedicated nodes, including appropriate taints for Spot instance node pools.
 
 ### Security & Networking
 - **Hub-Spoke Architecture**: Enterprise network topology with ExpressRoute support
@@ -197,9 +197,9 @@ The cluster includes comprehensive monitoring:
 
 ### Cost Optimization Tips
 
-1. **Reserved Instances**: Save up to 72% with 1 or 3-year reservations
-2. **Spot Instances**: Use for non-critical Spark workloads (up to 90% savings)
-3. **Auto-scaling**: Configure based on actual workload patterns
+1. **Reserved Instances**: Save up to 72% with 1 or 3-year reservations for regular node pools.
+2. **Spot Instances**: Now supported directly within the module for applicable node pools (e.g., Spark workers). Use for non-critical, interruptible Spark workloads (up to 90% savings). Configure `priority = "Spot"` in the node pool definition.
+3. **Auto-scaling**: Configure based on actual workload patterns for all node pool types.
 4. **Right-sizing**: Monitor usage and adjust VM sizes accordingly
 5. **Log Retention**: Reduce retention period if 30 days is excessive
 

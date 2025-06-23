@@ -107,9 +107,41 @@ module "aks_spark" {
       tags = {
         "NodePool" = "SparkWorkers"
       }
+    },
+    sparkworkers_spot = {
+      name                   = "sparkspot"
+      vm_size                = "Standard_E8s_v5" # 8 vCPU, 64 GB RAM
+      node_count             = 2                 # Start with a smaller count for spot
+      subnet_id              = azurerm_subnet.spark.id
+      mode                   = "User"
+      enable_auto_scaling    = true
+      min_count              = 1  # Allow scaling down to 1 for spot
+      max_count              = 10 # Max spot instances
+      availability_zones     = ["1", "2", "3"]
+      os_disk_type           = "Managed"
+      os_disk_size_gb        = 256
+      ultra_ssd_enabled      = false
+      enable_host_encryption = false
+      node_labels = {
+        "workload-type" = "apache-spark-spot"
+        "compute-type"  = "memory-optimized"
+        "priority"      = "spot"
+      }
+      node_taints = [{
+        key    = "workload"
+        value  = "spark-spot"
+        effect = "NoSchedule" # Ensure only workloads tolerant of spot eviction run here
+      }]
+      tags = {
+        "NodePool" = "SparkWorkersSpot"
+      }
+      # Spot Instance Configuration
+      priority        = "Spot"
+      eviction_policy = "Delete" # Or "Deallocate" if you want to keep the disks
+      spot_max_price  = -1       # Use Azure market price (can be a specific value like 0.1 USD/hour)
     }
 
-    # Optional: Spark driver nodes - compute optimized
+    # Optional: Spark driver nodes - compute optimized (usually not on Spot)
     sparkdriver = {
       name                   = "sparkdriver"
       vm_size                = "Standard_F8s_v2" # 8 vCPU, 16 GB RAM
