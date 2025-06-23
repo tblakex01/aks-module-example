@@ -82,6 +82,10 @@ variable "node_pools" {
       effect = string
     }))
     tags = map(string)
+    # Spot instance configuration
+    priority        = optional(string, "Regular") # Spot or Regular
+    eviction_policy = optional(string, "Delete")  # Delete or Deallocate
+    spot_max_price  = optional(number, -1)        # Max price for Spot instances, -1 for on-demand price
   }))
   default = {}
 }

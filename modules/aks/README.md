@@ -5,7 +5,7 @@ This module creates a production-ready Azure Kubernetes Service (AKS) cluster wi
 ## Features
 
 - **Private AKS cluster** with no public endpoint by default
-- **Multiple node pools** support with auto-scaling
+- **Multiple node pools** support with auto-scaling (including Spot instances)
 - **Azure AD RBAC** integration
 - **Workload identity** and OIDC issuer support
 - **Key Vault secrets provider** integration
@@ -125,6 +125,37 @@ module "aks" {
       tags = {
         "NodePool" = "Spark"
       }
+    },
+    spot_spark_workers = {
+      name                   = "spotspark"
+      vm_size                = "Standard_E8s_v5"
+      node_count             = 2 # Initial count for spot
+      subnet_id              = azurerm_subnet.spark.id # Assuming same subnet
+      mode                   = "User"
+      enable_auto_scaling    = true
+      min_count              = 1
+      max_count              = 10
+      availability_zones     = ["1", "2", "3"]
+      os_disk_type           = "Managed"
+      os_disk_size_gb        = 256
+      ultra_ssd_enabled      = false
+      enable_host_encryption = false
+      node_labels = {
+        "workload-type" = "apache-spark-spot"
+        "priority"      = "spot"
+      }
+      node_taints = [{ # Taint to ensure only tolerant workloads run here
+        key    = "workload"
+        value  = "spark-spot"
+        effect = "NoSchedule"
+      }]
+      tags = {
+        "NodePool" = "SparkSpot"
+      }
+      # Spot instance configuration
+      priority        = "Spot"
+      eviction_policy = "Delete" # or "Deallocate"
+      spot_max_price  = -1       # Use -1 for Azure market price, or set a specific max price
     }
   }
   
@@ -199,7 +230,7 @@ module "aks" {
 | network_profile | Network profile configuration for the cluster | `object` | n/a | yes |
 | azure_ad_rbac | Azure AD RBAC configuration | `object` | n/a | yes |
 | sku_tier | The SKU Tier that should be used for this Kubernetes Cluster | `string` | `"Standard"` | no |
-| node_pools | Map of additional node pools to create | `map(object)` | `{}` | no |
+| node_pools | Map of additional node pools to create. See `object` structure below. | `map(object)` | `{}` | no |
 | private_cluster_enabled | Should this Kubernetes Cluster have its API server only exposed on internal IP addresses? | `bool` | `true` | no |
 | enable_monitoring | Enable Azure Monitor for containers | `bool` | `true` | no |
 | log_analytics_workspace_id | ID of the Log Analytics workspace for monitoring | `string` | `null` | no |
@@ -210,6 +241,33 @@ module "aks" {
 | maintenance_window | Maintenance window configuration | `object` | `null` | no |
 | automatic_channel_upgrade | The automatic upgrade channel for the cluster | `string` | `"patch"` | no |
 | tags | Tags to apply to all resources | `map(string)` | `{}` | no |
+
+### `node_pools` Object Structure
+
+Each object in the `node_pools` map can have the following attributes:
+
+| Attribute | Description | Type | Default | Required |
+|-----------|-------------|------|---------|:--------:|
+| `name` | Name of the node pool | `string` | n/a | yes |
+| `vm_size` | VM size for the nodes | `string` | n/a | yes |
+| `node_count` | Initial number of nodes (if auto-scaling is disabled) | `number` | n/a | yes (if `enable_auto_scaling` is `false`) |
+| `subnet_id` | Subnet ID for the node pool | `string` | n/a | yes |
+| `mode` | Mode of the node pool (System or User) | `string` | `"User"` | no |
+| `enable_auto_scaling` | Enable auto-scaling for the node pool | `bool` | `true` | no |
+| `min_count` | Minimum number of nodes for auto-scaling | `number` | `1` | no |
+| `max_count` | Maximum number of nodes for auto-scaling | `number` | `5` | no |
+| `availability_zones` | List of availability zones | `list(string)` | `null` | no |
+| `os_disk_type` | OS disk type (Managed or Ephemeral) | `string` | `"Managed"` | no |
+| `os_disk_size_gb` | OS disk size in GB | `number` | `128` | no |
+| `ultra_ssd_enabled` | Enable Ultra SSD | `bool` | `false` | no |
+| `enable_host_encryption` | Enable host-based encryption | `bool` | `false` | no |
+| `node_labels` | Map of labels to apply to nodes | `map(string)` | `{}` | no |
+| `node_taints` | List of taints to apply to nodes | `list(object)` | `[]` | no |
+| `tags` | Tags to apply to the node pool | `map(string)` | `{}` | no |
+| `priority` | Priority of the node pool (`Regular` or `Spot`) | `string` | `"Regular"` | no |
+| `eviction_policy` | Eviction policy for Spot nodes (`Delete` or `Deallocate`) | `string` | `"Delete"` | no (required if `priority` is `Spot`) |
+| `spot_max_price` | Maximum price for Spot instances (-1 for on-demand price) | `number` | `-1` | no (used if `priority` is `Spot`) |
+
 
 ## Outputs
 
