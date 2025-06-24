@@ -92,6 +92,15 @@ resource "azurerm_kubernetes_cluster" "aks" {
   tags = var.tags
 }
 
+locals {
+  # Create a map with spot instance flags for each node pool
+  node_pool_configs = {
+    for k, v in var.node_pools : k => {
+      is_spot = lower(v.priority) == "spot"
+    }
+  }
+}
+
 resource "azurerm_kubernetes_cluster_node_pool" "additional" {
   for_each = var.node_pools
 
@@ -120,9 +129,9 @@ resource "azurerm_kubernetes_cluster_node_pool" "additional" {
   ]
 
   # Normalize to the capitalized form expected by the provider
-  priority        = lower(each.value.priority) == "spot" ? "Spot" : "Regular"
-  eviction_policy = lower(each.value.priority) == "spot" ? each.value.eviction_policy : null
-  spot_max_price  = lower(each.value.priority) == "spot" ? each.value.spot_max_price : null
+  priority        = local.node_pool_configs[each.key].is_spot ? "Spot" : "Regular"
+  eviction_policy = local.node_pool_configs[each.key].is_spot ? title(lower(each.value.eviction_policy)) : null
+  spot_max_price  = local.node_pool_configs[each.key].is_spot ? each.value.spot_max_price : null
 
   tags = merge(var.tags, each.value.tags)
 
@@ -132,7 +141,7 @@ resource "azurerm_kubernetes_cluster_node_pool" "additional" {
       error_message = "Node pool '${each.key}' has invalid priority '${each.value.priority}'. Priority must be either 'Regular' or 'Spot' (case-insensitive)."
     }
     precondition {
-      condition     = lower(each.value.priority) != "spot" || contains(["delete", "deallocate"], lower(each.value.eviction_policy))
+      condition     = !local.node_pool_configs[each.key].is_spot || contains(["delete", "deallocate"], lower(each.value.eviction_policy))
       error_message = "Node pool '${each.key}' has invalid eviction_policy '${each.value.eviction_policy}'. When priority is 'Spot', eviction_policy must be either 'Delete' or 'Deallocate' (case-insensitive)."
     }
     precondition {

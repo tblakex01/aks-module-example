@@ -88,6 +88,28 @@ variable "node_pools" {
     spot_max_price  = optional(number, -1)        # Max price for Spot instances (must be >= -1), -1 uses market price
   }))
   default = {}
+
+  validation {
+    condition = alltrue([
+      for k, v in var.node_pools : contains(["regular", "spot"], lower(v.priority))
+    ])
+    error_message = "Each node pool's priority must be either 'Regular' or 'Spot' (case-insensitive)."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.node_pools :
+      lower(v.priority) != "spot" || contains(["delete", "deallocate"], lower(v.eviction_policy))
+    ])
+    error_message = "When priority is 'Spot', eviction_policy must be either 'Delete' or 'Deallocate' (case-insensitive)."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.node_pools : v.spot_max_price >= -1
+    ])
+    error_message = "Each node pool's spot_max_price must be greater than or equal to -1."
+  }
 }
 
 variable "network_profile" {
