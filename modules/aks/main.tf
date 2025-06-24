@@ -123,6 +123,5 @@ resource "azurerm_kubernetes_cluster_node_pool" "additional" {
   eviction_policy = each.value.priority == "Spot" ? each.value.eviction_policy : null
   spot_max_price  = each.value.priority == "Spot" ? each.value.spot_max_price : null
 
-
   tags = merge(var.tags, each.value.tags)
 }
