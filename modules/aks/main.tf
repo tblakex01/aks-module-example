@@ -119,9 +119,25 @@ resource "azurerm_kubernetes_cluster_node_pool" "additional" {
     for taint in coalesce(each.value.node_taints, []) : "${taint.key}=${taint.value}:${taint.effect}"
   ]
 
-  priority        = each.value.priority
+  # Normalize to the capitalized form expected by the provider
+  priority        = lower(each.value.priority) == "spot" ? "Spot" : "Regular"
   eviction_policy = lower(each.value.priority) == "spot" ? each.value.eviction_policy : null
   spot_max_price  = lower(each.value.priority) == "spot" ? each.value.spot_max_price : null
 
   tags = merge(var.tags, each.value.tags)
+
+  lifecycle {
+    precondition {
+      condition     = contains(["regular", "spot"], lower(each.value.priority))
+      error_message = "Node pool '${each.key}' has invalid priority '${each.value.priority}'. Priority must be either 'Regular' or 'Spot' (case-insensitive)."
+    }
+    precondition {
+      condition     = lower(each.value.priority) != "spot" || contains(["delete", "deallocate"], lower(each.value.eviction_policy))
+      error_message = "Node pool '${each.key}' has invalid eviction_policy '${each.value.eviction_policy}'. When priority is 'Spot', eviction_policy must be either 'Delete' or 'Deallocate' (case-insensitive)."
+    }
+    precondition {
+      condition     = each.value.spot_max_price >= -1
+      error_message = "Node pool '${each.key}' has invalid spot_max_price '${each.value.spot_max_price}'. The spot_max_price must be greater than or equal to -1."
+    }
+  }
 }

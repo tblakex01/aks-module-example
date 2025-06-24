@@ -83,9 +83,9 @@ variable "node_pools" {
     }))
     tags = map(string)
     # Spot instance configuration
-    priority        = optional(string, "Regular") # Spot or Regular (case-insensitive)
-    eviction_policy = optional(string, "Delete")  # Delete or Deallocate
-    spot_max_price  = optional(number, -1)        # Max price for Spot instances, -1 for on-demand price
+    priority        = optional(string, "Regular") # Valid values: "Regular" or "Spot" (case-insensitive)
+    eviction_policy = optional(string, "Delete")  # Valid values: "Delete" or "Deallocate" (case-insensitive, only used when priority is "Spot")
+    spot_max_price  = optional(number, -1)        # Max price for Spot instances (must be >= -1), -1 uses market price
   }))
   default = {}
 }
