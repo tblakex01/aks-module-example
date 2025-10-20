@@ -79,6 +79,8 @@ resource "azurerm_kubernetes_cluster" "aks" {
   workload_identity_enabled = var.workload_identity_enabled
   oidc_issuer_enabled       = var.oidc_issuer_enabled
 
+  automatic_channel_upgrade = var.automatic_channel_upgrade
+
   dynamic "maintenance_window" {
     for_each = var.maintenance_window != null ? [var.maintenance_window] : []
     content {
