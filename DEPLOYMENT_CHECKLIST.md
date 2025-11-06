@@ -18,8 +18,8 @@
   - System: x.x.x.0/26 (64 IPs)
   - Spark: x.x.x.64/26 (64 IPs)
   - Endpoints: x.x.x.128/25 (128 IPs)
-- ✅ **Service CIDR**: 10.0.0.0/16
-- ✅ **DNS Service IP**: 10.0.0.10
+- ✅ **Service CIDR**: 172.16.0.0/16
+- ✅ **DNS Service IP**: 172.16.0.10
 
 ### Node Pools
 - ✅ **System Pool**:

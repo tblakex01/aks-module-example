@@ -99,7 +99,8 @@ run_command_enabled = false  # Disable for production
    - Ensure on-premises DNS can resolve Azure private zones
 
 3. **IP Address Management**
-   - Verify no IP conflicts with 10.0.0.0/24
+   - Verify no IP conflicts with VNet ranges (10.0.1.0/24 - 10.0.4.0/24) and hub network
+   - Confirm service CIDR (172.16.0.0/16) does not overlap with any connected networks
    - Document IP allocation for future growth
 
 ## 📋 Pre-deployment Checklist

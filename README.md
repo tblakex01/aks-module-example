@@ -137,12 +137,12 @@ aks-cluster/
 
 ### Network Configuration
 
-The cluster uses the following network architecture:
-- **VNet CIDR**: 10.0.0.0/24
-- **System Subnet**: 10.0.1.0/26
-- **Spark Subnet**: 10.0.2.0/25
-- **Private Endpoints**: 10.0.3.0/25
-- **Service CIDR**: 10.0.0.0/16
+The cluster uses the following network architecture (environment-specific):
+- **VNet CIDR**: Environment-specific (10.0.1.0/24 - 10.0.4.0/24)
+- **System Subnet**: x.x.x.0/26 (64 IPs)
+- **Spark Subnet**: x.x.x.64/26 (64 IPs)
+- **Private Endpoints**: x.x.x.128/25 (128 IPs)
+- **Service CIDR**: 172.16.0.0/16
 
 ### Spark Optimization
 

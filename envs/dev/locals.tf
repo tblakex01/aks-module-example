@@ -10,6 +10,11 @@ locals {
   system_vm_size = "Standard_D2s_v3" # 2 vCPU, 8 GB RAM - for system pods
   spark_vm_size  = "Standard_D4s_v3" # 4 vCPU, 16 GB RAM - for Spark testing
 
+  # Kubernetes service network configuration
+  # Uses non-overlapping RFC1918 range to avoid conflicts with VNet and hub network
+  service_cidr   = "172.16.0.0/16"
+  dns_service_ip = "172.16.0.10"
+
   subnets = {
     system = {
       name             = "subnet-aks-system"
