@@ -21,7 +21,7 @@ On-Premises/AWS ←→ ExpressRoute ←→ Hub VNet (10.0.5.0/23) ←→ AKS Spo
   - Staging: 10.0.3.0/24 (system: 10.0.3.0/26, spark: 10.0.3.64/26, endpoints: 10.0.3.128/26)
   - Prod: 10.0.4.0/24 (system: 10.0.4.0/26, spark: 10.0.4.64/26, endpoints: 10.0.4.128/26)
 - **Hub VNet**: 10.0.5.0/23 (existing)
-- **Service CIDR**: 10.0.0.0/16 (Kubernetes services)
+- **Service CIDR**: 172.16.0.0/16 (Kubernetes services - non-overlapping range)
 
 ### 2. VNet Peering
 - Bidirectional peering between hub and spoke

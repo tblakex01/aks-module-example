@@ -54,8 +54,8 @@ module "aks" {
   network_profile = {
     network_plugin = "azure"
     network_policy = "azure"
-    dns_service_ip = "10.0.0.10"
-    service_cidr   = "10.0.0.0/16"
+    dns_service_ip = "172.16.0.10"
+    service_cidr   = "172.16.0.0/16"
     outbound_type  = "loadBalancer"
   }
 

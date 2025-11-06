@@ -280,8 +280,8 @@ module "aks" {
   network_profile = {
     network_plugin = "azure"
     network_policy = "azure"
-    dns_service_ip = "10.0.0.10"
-    service_cidr   = "10.0.0.0/16"
+    dns_service_ip = local.dns_service_ip
+    service_cidr   = local.service_cidr
     outbound_type  = "loadBalancer"
     load_balancer_profile = {
       managed_outbound_ip_count = 2
