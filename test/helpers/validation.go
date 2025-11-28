@@ -13,7 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// WaitForClusterReady waits for an AKS cluster to be in ready state
+// WaitForClusterReady waits for an AKS cluster to be in ready state using exponential backoff.
+// Uses exponential backoff starting at 10 seconds, doubling each retry up to a maximum of 60 seconds.
 func WaitForClusterReady(t *testing.T, ctx context.Context, subscriptionID, resourceGroupName, clusterName string, maxRetries int) error {
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
@@ -24,6 +25,14 @@ func WaitForClusterReady(t *testing.T, ctx context.Context, subscriptionID, reso
 	if err != nil {
 		return err
 	}
+
+	// Exponential backoff parameters
+	const (
+		initialBackoff = 10 * time.Second
+		maxBackoff     = 60 * time.Second
+		backoffFactor  = 2
+	)
+	currentBackoff := initialBackoff
 
 	for i := 0; i < maxRetries; i++ {
 		cluster, err := aksClient.Get(ctx, resourceGroupName, clusterName, nil)
@@ -41,8 +50,14 @@ func WaitForClusterReady(t *testing.T, ctx context.Context, subscriptionID, reso
 			}
 		}
 
-		t.Logf("Waiting for cluster to be ready... (attempt %d/%d)", i+1, maxRetries)
-		time.Sleep(30 * time.Second)
+		t.Logf("Waiting for cluster to be ready... (attempt %d/%d, backoff %v)", i+1, maxRetries, currentBackoff)
+		time.Sleep(currentBackoff)
+
+		// Increase backoff for next iteration, capped at maxBackoff
+		currentBackoff *= backoffFactor
+		if currentBackoff > maxBackoff {
+			currentBackoff = maxBackoff
+		}
 	}
 
 	return fmt.Errorf("timeout waiting for cluster to be ready")

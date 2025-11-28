@@ -1,3 +1,6 @@
+// Package test provides automated testing infrastructure for the AKS Terraform module
+// using Terratest. It includes unit tests for Terraform configuration validation and
+// integration tests for deploying and verifying real Azure resources.
 module github.com/azure/aks-spark-cluster/test
 
 go 1.21

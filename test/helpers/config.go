@@ -1,6 +1,8 @@
 package helpers
 
 import (
+	"crypto/rand"
+	"math/big"
 	"os"
 	"testing"
 
@@ -100,8 +102,16 @@ func GetRandomString(length int) string {
 	return string(b)
 }
 
-// randInt generates a random integer
+// randInt generates a cryptographically secure random integer in the range [0, max).
+// Uses crypto/rand for better randomness compared to PID-based approaches.
 func randInt(max int) int {
-	// Simple implementation - in production use crypto/rand
-	return int(os.Getpid()+int(os.Getppid())) % max
+	if max <= 0 {
+		return 0
+	}
+	n, err := rand.Int(rand.Reader, big.NewInt(int64(max)))
+	if err != nil {
+		// Fallback to simple modulo if crypto/rand fails (should not happen in practice)
+		return int(os.Getpid()) % max
+	}
+	return int(n.Int64())
 }
