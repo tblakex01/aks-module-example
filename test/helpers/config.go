@@ -1,6 +1,8 @@
 package helpers
 
 import (
+	"crypto/rand"
+	"math/big"
 	"os"
 	"testing"
 
@@ -11,7 +13,7 @@ import (
 func GetTerraformOptions(t *testing.T, terraformDir string, vars map[string]interface{}) *terraform.Options {
 	// Set default variables if not provided
 	defaultVars := map[string]interface{}{
-		"environment":         "test",
+		"environment":        "test",
 		"location":           GetTestLocation(),
 		"system_node_count":  1,
 		"spark_node_count":   1,
@@ -29,16 +31,16 @@ func GetTerraformOptions(t *testing.T, terraformDir string, vars map[string]inte
 		NoColor:      true,
 		MaxRetries:   3,
 		RetryableTerraformErrors: map[string]string{
-			".*timeout.*":                    "Timeout error occurred",
-			".*Client.Timeout.*":             "Client timeout error",
-			".*could not be reached.*":       "Service temporarily unavailable",
-			".*connection reset by peer.*":   "Connection was reset",
-			".*TooManyRequests.*":            "Rate limit exceeded",
-			".*ServiceUnavailable.*":         "Service temporarily unavailable",
-			".*InternalServerError.*":        "Internal server error",
-			".*ResourceGroupNotFound.*":      "Resource group not found (eventual consistency)",
-			".*AuthorizationFailed.*":        "Authorization failed (eventual consistency)",
-			".*RequestDisallowedByPolicy.*":  "Policy evaluation in progress",
+			".*timeout.*":                   "Timeout error occurred",
+			".*Client.Timeout.*":            "Client timeout error",
+			".*could not be reached.*":      "Service temporarily unavailable",
+			".*connection reset by peer.*":  "Connection was reset",
+			".*TooManyRequests.*":           "Rate limit exceeded",
+			".*ServiceUnavailable.*":        "Service temporarily unavailable",
+			".*InternalServerError.*":       "Internal server error",
+			".*ResourceGroupNotFound.*":     "Resource group not found (eventual consistency)",
+			".*AuthorizationFailed.*":       "Authorization failed (eventual consistency)",
+			".*RequestDisallowedByPolicy.*": "Policy evaluation in progress",
 		},
 	}
 }
@@ -100,8 +102,16 @@ func GetRandomString(length int) string {
 	return string(b)
 }
 
-// randInt generates a random integer
+// randInt generates a cryptographically secure random integer in the range [0, max).
+// Uses crypto/rand for better randomness compared to PID-based approaches.
 func randInt(max int) int {
-	// Simple implementation - in production use crypto/rand
-	return int(os.Getpid()+int(os.Getppid())) % max
+	if max <= 0 {
+		return 0
+	}
+	n, err := rand.Int(rand.Reader, big.NewInt(int64(max)))
+	if err != nil {
+		// Fallback to simple modulo if crypto/rand fails (should not happen in practice)
+		return int(os.Getpid()) % max
+	}
+	return int(n.Int64())
 }
