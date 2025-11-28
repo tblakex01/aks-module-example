@@ -11,7 +11,7 @@ import (
 func GetTerraformOptions(t *testing.T, terraformDir string, vars map[string]interface{}) *terraform.Options {
 	// Set default variables if not provided
 	defaultVars := map[string]interface{}{
-		"environment":         "test",
+		"environment":        "test",
 		"location":           GetTestLocation(),
 		"system_node_count":  1,
 		"spark_node_count":   1,
@@ -29,16 +29,16 @@ func GetTerraformOptions(t *testing.T, terraformDir string, vars map[string]inte
 		NoColor:      true,
 		MaxRetries:   3,
 		RetryableTerraformErrors: map[string]string{
-			".*timeout.*":                    "Timeout error occurred",
-			".*Client.Timeout.*":             "Client timeout error",
-			".*could not be reached.*":       "Service temporarily unavailable",
-			".*connection reset by peer.*":   "Connection was reset",
-			".*TooManyRequests.*":            "Rate limit exceeded",
-			".*ServiceUnavailable.*":         "Service temporarily unavailable",
-			".*InternalServerError.*":        "Internal server error",
-			".*ResourceGroupNotFound.*":      "Resource group not found (eventual consistency)",
-			".*AuthorizationFailed.*":        "Authorization failed (eventual consistency)",
-			".*RequestDisallowedByPolicy.*":  "Policy evaluation in progress",
+			".*timeout.*":                   "Timeout error occurred",
+			".*Client.Timeout.*":            "Client timeout error",
+			".*could not be reached.*":      "Service temporarily unavailable",
+			".*connection reset by peer.*":  "Connection was reset",
+			".*TooManyRequests.*":           "Rate limit exceeded",
+			".*ServiceUnavailable.*":        "Service temporarily unavailable",
+			".*InternalServerError.*":       "Internal server error",
+			".*ResourceGroupNotFound.*":     "Resource group not found (eventual consistency)",
+			".*AuthorizationFailed.*":       "Authorization failed (eventual consistency)",
+			".*RequestDisallowedByPolicy.*": "Policy evaluation in progress",
 		},
 	}
 }

@@ -112,27 +112,27 @@ func validateAKSClusterProperties(t *testing.T, ctx context.Context, cred *azide
 	// Validate cluster properties
 	assert.Equal(t, clusterName, *cluster.Name)
 	assert.Equal(t, "Succeeded", string(*cluster.Properties.ProvisioningState))
-	
+
 	// Validate it's a private cluster
 	assert.True(t, *cluster.Properties.APIServerAccessProfile.EnablePrivateCluster)
-	
+
 	// Validate SKU
 	assert.Equal(t, "Standard", string(*cluster.SKU.Tier))
-	
+
 	// Validate identity type
 	assert.Equal(t, armcontainerservice.ResourceIdentityTypeSystemAssigned, *cluster.Identity.Type)
-	
+
 	// Validate Azure RBAC is enabled
 	assert.True(t, *cluster.Properties.AADProfile.EnableAzureRBAC)
-	
+
 	// Validate workload identity is enabled
 	assert.NotNil(t, cluster.Properties.SecurityProfile.WorkloadIdentity)
 	assert.True(t, *cluster.Properties.SecurityProfile.WorkloadIdentity.Enabled)
-	
+
 	// Validate OIDC issuer is enabled
 	assert.NotNil(t, cluster.Properties.OidcIssuerProfile)
 	assert.True(t, *cluster.Properties.OidcIssuerProfile.Enabled)
-	
+
 	// Validate node pools
 	validateNodePools(t, cluster)
 }
