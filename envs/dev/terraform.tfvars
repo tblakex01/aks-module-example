@@ -4,7 +4,7 @@
 location            = "East US"
 resource_group_name = "rg-aks-spark-dev"
 cluster_name        = "aks-spark-dev"
-kubernetes_version  = "1.31.8"
+kubernetes_version  = "1.35"
 node_count          = 1
 sku_tier            = "Free" # Dev uses Free tier
 

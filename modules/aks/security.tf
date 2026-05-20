@@ -24,19 +24,12 @@ resource "azurerm_key_vault_access_policy" "aks" {
   ]
 }
 
-# RBAC assignments
-resource "azurerm_role_assignment" "aks_network_contributor" {
-  count                = var.create_network_resources ? 1 : 0
-  scope                = azurerm_virtual_network.aks[0].id
-  role_definition_name = "Network Contributor"
-  principal_id         = azurerm_kubernetes_cluster.aks.identity[0].principal_id
-}
-
 resource "azurerm_role_assignment" "aks_monitoring_metrics_publisher" {
-  count                = var.enable_monitoring ? 1 : 0
-  scope                = azurerm_kubernetes_cluster.aks.id
-  role_definition_name = "Monitoring Metrics Publisher"
-  principal_id         = azurerm_kubernetes_cluster.aks.oms_agent[0].oms_agent_identity[0].object_id
+  count                            = var.enable_monitoring ? 1 : 0
+  scope                            = azurerm_kubernetes_cluster.aks.id
+  role_definition_name             = "Monitoring Metrics Publisher"
+  principal_id                     = azurerm_kubernetes_cluster.aks.oms_agent[0].oms_agent_identity[0].object_id
+  skip_service_principal_aad_check = true
 }
 
 # Variables for external integrations
@@ -48,8 +41,9 @@ variable "acr_id" {
 
 # ACR pull permission
 resource "azurerm_role_assignment" "aks_acr_pull" {
-  count                = var.acr_id != null ? 1 : 0
-  scope                = var.acr_id
-  role_definition_name = "AcrPull"
-  principal_id         = azurerm_kubernetes_cluster.aks.kubelet_identity[0].object_id
+  count                            = var.acr_id != null ? 1 : 0
+  scope                            = var.acr_id
+  role_definition_name             = "AcrPull"
+  principal_id                     = azurerm_kubernetes_cluster.aks.kubelet_identity[0].object_id
+  skip_service_principal_aad_check = true
 }

@@ -51,17 +51,17 @@ func WaitForClusterReady(t *testing.T, ctx context.Context, subscriptionID, reso
 // ValidateNodePool validates a node pool configuration
 func ValidateNodePool(t *testing.T, nodePool *armcontainerservice.ManagedClusterAgentPoolProfile, expectedConfig NodePoolConfig) {
 	require.NotNil(t, nodePool)
-	
+
 	// Validate VM size
 	if expectedConfig.VMSize != "" {
 		assert.Equal(t, expectedConfig.VMSize, string(*nodePool.VMSize))
 	}
-	
+
 	// Validate node count
 	if expectedConfig.NodeCount > 0 {
 		assert.Equal(t, int32(expectedConfig.NodeCount), *nodePool.Count)
 	}
-	
+
 	// Validate autoscaling
 	if expectedConfig.EnableAutoScaling {
 		assert.True(t, *nodePool.EnableAutoScaling)
@@ -72,17 +72,17 @@ func ValidateNodePool(t *testing.T, nodePool *armcontainerservice.ManagedCluster
 			assert.Equal(t, int32(expectedConfig.MaxCount), *nodePool.MaxCount)
 		}
 	}
-	
+
 	// Validate OS disk size
 	if expectedConfig.OSDiskSizeGB > 0 {
 		assert.Equal(t, int32(expectedConfig.OSDiskSizeGB), *nodePool.OSDiskSizeGB)
 	}
-	
+
 	// Validate mode
 	if expectedConfig.Mode != "" {
 		assert.Equal(t, expectedConfig.Mode, string(*nodePool.Mode))
 	}
-	
+
 	// Validate taints
 	if len(expectedConfig.Taints) > 0 {
 		require.NotNil(t, nodePool.NodeTaints)
@@ -121,7 +121,7 @@ func ValidateSubnet(t *testing.T, subnetID string, expectedAddressPrefix string)
 	// Parse subnet ID to get details
 	parts := strings.Split(subnetID, "/")
 	require.GreaterOrEqual(t, len(parts), 11, "Invalid subnet ID format")
-	
+
 	// Validate subnet name format
 	subnetName := parts[10]
 	assert.Contains(t, subnetName, "snet-", "Subnet name should contain 'snet-' prefix")
@@ -130,10 +130,10 @@ func ValidateSubnet(t *testing.T, subnetID string, expectedAddressPrefix string)
 // ValidatePrivateCluster validates private cluster configuration
 func ValidatePrivateCluster(t *testing.T, cluster *armcontainerservice.ManagedCluster) {
 	require.NotNil(t, cluster.Properties.APIServerAccessProfile)
-	
+
 	// Validate private cluster is enabled
 	assert.True(t, *cluster.Properties.APIServerAccessProfile.EnablePrivateCluster, "Private cluster should be enabled")
-	
+
 	// Validate no public FQDN
 	if cluster.Properties.APIServerAccessProfile.EnablePrivateClusterPublicFQDN != nil {
 		assert.False(t, *cluster.Properties.APIServerAccessProfile.EnablePrivateClusterPublicFQDN, "Public FQDN should be disabled")
@@ -143,10 +143,10 @@ func ValidatePrivateCluster(t *testing.T, cluster *armcontainerservice.ManagedCl
 // ValidateRBAC validates RBAC configuration
 func ValidateRBAC(t *testing.T, cluster *armcontainerservice.ManagedCluster) {
 	require.NotNil(t, cluster.Properties.AADProfile)
-	
+
 	// Validate Azure RBAC is enabled
 	assert.True(t, *cluster.Properties.AADProfile.EnableAzureRBAC, "Azure RBAC should be enabled")
-	
+
 	// Validate managed AAD is enabled
 	assert.True(t, *cluster.Properties.AADProfile.Managed, "Managed AAD should be enabled")
 }
@@ -155,10 +155,10 @@ func ValidateRBAC(t *testing.T, cluster *armcontainerservice.ManagedCluster) {
 func ValidateWorkloadIdentity(t *testing.T, cluster *armcontainerservice.ManagedCluster) {
 	require.NotNil(t, cluster.Properties.SecurityProfile)
 	require.NotNil(t, cluster.Properties.SecurityProfile.WorkloadIdentity)
-	
+
 	// Validate workload identity is enabled
 	assert.True(t, *cluster.Properties.SecurityProfile.WorkloadIdentity.Enabled, "Workload identity should be enabled")
-	
+
 	// Validate OIDC issuer is enabled
 	require.NotNil(t, cluster.Properties.OidcIssuerProfile)
 	assert.True(t, *cluster.Properties.OidcIssuerProfile.Enabled, "OIDC issuer should be enabled")
@@ -170,7 +170,7 @@ func ExtractResourceInfo(resourceID string) (subscriptionID, resourceName string
 	if len(parts) < 9 {
 		return "", "", fmt.Errorf("invalid resource ID format")
 	}
-	
+
 	subscriptionID = parts[2]
 	resourceName = parts[len(parts)-1]
 	return subscriptionID, resourceName, nil

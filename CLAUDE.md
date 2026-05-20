@@ -74,5 +74,5 @@ The Terraform configuration has implicit dependencies:
 ### Important Variables
 - `location`: Azure region (default: "East US")
 - `cluster_name`: AKS cluster name (default: "aks-spark-cluster")
-- `kubernetes_version`: K8s version (default: "1.28.5")
+- `kubernetes_version`: K8s version (default: "1.35")
 - `node_count`: Initial node count per pool (default: 3)

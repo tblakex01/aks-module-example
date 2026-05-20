@@ -215,11 +215,15 @@ resource "azurerm_key_vault" "aks" {
 module "aks" {
   source = "../../modules/aks"
 
-  cluster_name        = var.cluster_name
-  location            = azurerm_resource_group.aks.location
-  resource_group_name = azurerm_resource_group.aks.name
-  kubernetes_version  = var.kubernetes_version
-  sku_tier            = var.sku_tier
+  cluster_name                    = var.cluster_name
+  location                        = azurerm_resource_group.aks.location
+  resource_group_name             = azurerm_resource_group.aks.name
+  kubernetes_version              = var.kubernetes_version
+  sku_tier                        = var.sku_tier
+  private_dns_zone_id             = azurerm_private_dns_zone.aks.id
+  network_contributor_scope_id    = azurerm_virtual_network.aks.id
+  assign_network_contributor_role = true
+  assign_private_dns_zone_role    = true
 
   # System node pool configuration
   system_node_pool = {
@@ -227,7 +231,7 @@ module "aks" {
     vm_size                      = local.system_vm_size
     node_count                   = var.node_count
     subnet_id                    = azurerm_subnet.system.id
-    enable_auto_scaling          = true
+    auto_scaling_enabled         = true
     min_count                    = 1
     max_count                    = 3
     availability_zones           = ["1", "2", "3"]
@@ -251,7 +255,7 @@ module "aks" {
       node_count             = var.node_count
       subnet_id              = azurerm_subnet.spark.id
       mode                   = "User"
-      enable_auto_scaling    = true
+      auto_scaling_enabled   = true
       min_count              = 2
       max_count              = 5
       availability_zones     = ["1", "2", "3"]
@@ -278,11 +282,14 @@ module "aks" {
 
   # Network configuration
   network_profile = {
-    network_plugin = "azure"
-    network_policy = "azure"
-    dns_service_ip = local.dns_service_ip
-    service_cidr   = local.service_cidr
-    outbound_type  = "loadBalancer"
+    network_plugin      = "azure"
+    network_plugin_mode = "overlay"
+    network_policy      = "cilium"
+    network_data_plane  = "cilium"
+    dns_service_ip      = local.dns_service_ip
+    service_cidr        = local.service_cidr
+    pod_cidr            = local.pod_cidr
+    outbound_type       = "loadBalancer"
     load_balancer_profile = {
       managed_outbound_ip_count = 2
       outbound_ports_allocated  = 8000

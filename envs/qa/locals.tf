@@ -14,6 +14,7 @@ locals {
   # Uses non-overlapping RFC1918 range to avoid conflicts with VNet and hub network
   service_cidr   = "172.16.0.0/16"
   dns_service_ip = "172.16.0.10"
+  pod_cidr       = "10.244.0.0/16"
 
   subnets = {
     system = {

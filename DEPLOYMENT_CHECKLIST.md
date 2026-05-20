@@ -5,7 +5,7 @@
 ### Core Settings
 - ✅ **Cluster Name**: `aks-spark-cluster`
 - ✅ **Location**: East US
-- ✅ **Kubernetes Version**: 1.31.8
+- ✅ **Kubernetes Version**: 1.35
 - ✅ **SKU Tier**: Standard (Production SLA)
 
 ### Network Configuration
@@ -167,4 +167,4 @@ All checks passed. The configuration is production-ready with:
 - Enterprise security controls
 - Monitoring and logging
 - Flexible networking options
-- Latest Kubernetes version (1.31.8)
+- Latest Kubernetes version (1.35)

@@ -50,7 +50,7 @@ This repository contains Terraform configuration for deploying a production-grad
 ## 📋 Prerequisites
 
 - Azure subscription with appropriate permissions
-- Terraform >= 1.0
+- Terraform >= 1.15
 - Azure CLI (for authentication)
 - [Optional] Existing hub VNet for ExpressRoute connectivity
 
@@ -73,7 +73,7 @@ Create a `terraform.tfvars` file:
 location         = "East US"
 cluster_name     = "aks-spark-prod"
 environment      = "production"
-enable_expressroute = true  # If you have ExpressRoute
+enable_hub_peering = true  # If you have ExpressRoute hub connectivity
 ```
 
 ### 4. Review the Plan
@@ -130,10 +130,9 @@ aks-cluster/
 | `location` | Azure region for resources | `East US` |
 | `cluster_name` | Name of the AKS cluster | `aks-spark-cluster` |
 | `environment` | Environment name (dev/prod) | `prod` |
-| `kubernetes_version` | Kubernetes version | `1.31.8` |
-| `enable_expressroute` | Enable ExpressRoute connectivity | `false` |
-| `spark_node_count` | Initial Spark node pool size | `3` |
-| `system_node_count` | Initial system node pool size | `3` |
+| `kubernetes_version` | Kubernetes version | `1.35` |
+| `enable_hub_peering` | Enable hub VNet peering for ExpressRoute connectivity | `false` |
+| `node_count` | Initial node count for pools before autoscaling takes over | `3` |
 
 ### Network Configuration
 
@@ -249,7 +248,7 @@ kubectl get nodes
 ```
 
 ### ExpressRoute Integration
-When `enable_expressroute = true`, the cluster:
+When `enable_hub_peering = true`, the cluster:
 - Peers with the hub VNet
 - Uses hub's ExpressRoute gateway
 - Routes on-premises traffic through ExpressRoute
@@ -282,7 +281,7 @@ go test -v -timeout 60m ./integration/...
 
 - **Unit Tests**: Validate Terraform configuration without deploying
 - **Integration Tests**: Deploy and validate real Azure resources
-- **Security Scans**: Automated security checks with Checkov and tfsec
+- **Security Scans**: Automated security checks with Checkov
 
 See [test/README.md](test/README.md) for detailed testing documentation.
 
@@ -309,12 +308,11 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🏗️ Built With
 
 - **Terraform** ~> 1.0
-- **AzureRM Provider** ~> 3.85
-- **Azure Kubernetes Service** 1.31.8
+- **AzureRM Provider** ~> 4.73
+- **Azure Kubernetes Service** 1.35
 
 ## 🙏 Acknowledgments
 
 - Azure Kubernetes Service documentation
 - Terraform AzureRM provider documentation
 - Apache Spark on Kubernetes best practices
-

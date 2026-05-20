@@ -69,7 +69,7 @@ terraform validate
 cd test
 
 # Run unit tests (no Azure resources needed)
-go test -v -timeout 30m ./unit/...
+go test -v -timeout 30m ./...
 
 # Run integration tests (requires Azure credentials, deploys real resources)
 RUN_INTEGRATION_TESTS=true go test -v -timeout 60m ./integration/...
@@ -124,7 +124,7 @@ Variables are defined in environment-specific configurations (`envs/{env}/variab
 |----------|-------------|------------------------|
 | `location` | Azure region | `East US` |
 | `cluster_name` | AKS cluster name | `aks-spark-cluster` |
-| `kubernetes_version` | K8s version | `1.31.8` |
+| `kubernetes_version` | K8s version | `1.35` |
 | `enable_hub_peering` | Hub VNet peering for ExpressRoute | `false` |
 | `sku_tier` | Cluster SKU tier (Free/Standard) | `Standard` |
 

@@ -1,82 +1,49 @@
 package test
 
 import (
+	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/gruntwork-io/terratest/modules/terraform"
-	"github.com/stretchr/testify/assert"
+	test_structure "github.com/gruntwork-io/terratest/modules/test-structure"
+	"github.com/stretchr/testify/require"
 )
 
-// TestTerraformBasicValidation validates the Terraform configuration
-func TestTerraformBasicValidation(t *testing.T) {
-	t.Parallel()
+func repoCopy(t *testing.T) string {
+	t.Helper()
 
-	terraformOptions := &terraform.Options{
-		TerraformDir: "../../",
-		NoColor:      true,
-	}
-
-	// Run terraform init and validate
-	terraform.Init(t, terraformOptions)
-	terraform.Validate(t, terraformOptions)
+	return test_structure.CopyTerraformFolderToTemp(t, "../../", ".")
 }
 
-// TestTerraformPlanWithDefaults tests the Terraform plan with default values
-func TestTerraformPlanWithDefaults(t *testing.T) {
-	t.Parallel()
-
-	terraformOptions := &terraform.Options{
-		TerraformDir: "../../",
-		PlanFilePath: "../../test-plan.out",
-		NoColor:      true,
+func newTerraformOptions(terraformDir string) *terraform.Options {
+	return &terraform.Options{
+		TerraformBinary: os.Getenv("TERRAFORM_BINARY"),
+		TerraformDir:    terraformDir,
+		NoColor:         true,
 	}
-
-	// Run terraform init and plan
-	terraform.Init(t, terraformOptions)
-	planExitCode := terraform.InitAndPlanWithExitCode(t, terraformOptions)
-
-	// Verify the plan was successful
-	assert.Equal(t, 0, planExitCode)
 }
 
-// TestTerraformPlanWithCustomValues tests the Terraform plan with custom values
-func TestTerraformPlanWithCustomValues(t *testing.T) {
-	t.Parallel()
+func TestModuleTerraformTests(t *testing.T) {
+	t.Helper()
 
-	terraformOptions := &terraform.Options{
-		TerraformDir: "../../",
-		Vars: map[string]interface{}{
-			"location":            "West US 2",
-			"cluster_name":        "test-aks-cluster",
-			"environment":         "test",
-			"kubernetes_version":  "1.31.8",
-			"system_node_count":   1,
-			"spark_node_count":    2,
-			"enable_expressroute": false,
-		},
-		PlanFilePath: "../../test-plan-custom.out",
-		NoColor:      true,
-	}
+	ctx := context.Background()
+	copyDir := repoCopy(t)
+	options := newTerraformOptions(filepath.Join(copyDir, "modules", "aks"))
 
-	// Run terraform init and plan
-	terraform.Init(t, terraformOptions)
-	planExitCode := terraform.InitAndPlanWithExitCode(t, terraformOptions)
-
-	// Verify the plan was successful
-	assert.Equal(t, 0, planExitCode)
+	terraform.InitContext(t, ctx, options)
+	output, err := terraform.RunTerraformCommandContextE(t, ctx, options, "test", "-no-color")
+	require.NoError(t, err, output)
 }
 
-// TestRequiredVariables tests that all required variables have defaults
-func TestRequiredVariables(t *testing.T) {
+func TestModuleFixtureValidate(t *testing.T) {
 	t.Parallel()
 
-	// Test with minimal configuration (relying on defaults)
-	terraformOptions := &terraform.Options{
-		TerraformDir: "../../",
-		NoColor:      true,
-	}
+	copyDir := repoCopy(t)
+	terraformOptions := newTerraformOptions(filepath.Join(copyDir, "test", "fixtures", "module"))
 
-	// This should succeed because all variables have defaults
-	terraform.Init(t, terraformOptions)
-	terraform.Validate(t, terraformOptions)
+	ctx := context.Background()
+	terraform.InitContext(t, ctx, terraformOptions)
+	terraform.ValidateContext(t, ctx, terraformOptions)
 }

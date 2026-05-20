@@ -37,25 +37,25 @@ output "kube_config_raw" {
 
 output "host" {
   description = "The Kubernetes cluster server host"
-  value       = azurerm_kubernetes_cluster.aks.kube_config[0].host
+  value       = try(azurerm_kubernetes_cluster.aks.kube_config[0].host, null)
   sensitive   = true
 }
 
 output "client_certificate" {
   description = "Base64 encoded public certificate used by clients to authenticate to the Kubernetes cluster"
-  value       = azurerm_kubernetes_cluster.aks.kube_config[0].client_certificate
+  value       = try(azurerm_kubernetes_cluster.aks.kube_config[0].client_certificate, null)
   sensitive   = true
 }
 
 output "client_key" {
   description = "Base64 encoded private key used by clients to authenticate to the Kubernetes cluster"
-  value       = azurerm_kubernetes_cluster.aks.kube_config[0].client_key
+  value       = try(azurerm_kubernetes_cluster.aks.kube_config[0].client_key, null)
   sensitive   = true
 }
 
 output "cluster_ca_certificate" {
   description = "Base64 encoded public CA certificate used as the root of trust for the Kubernetes cluster"
-  value       = azurerm_kubernetes_cluster.aks.kube_config[0].cluster_ca_certificate
+  value       = try(azurerm_kubernetes_cluster.aks.kube_config[0].cluster_ca_certificate, null)
   sensitive   = true
 }
 
@@ -65,22 +65,27 @@ output "node_resource_group" {
 }
 
 output "identity_principal_id" {
-  description = "The Principal ID of the System Assigned Managed Service Identity"
+  description = "The Principal ID of the AKS user assigned managed identity"
   value       = azurerm_kubernetes_cluster.aks.identity[0].principal_id
 }
 
 output "identity_tenant_id" {
-  description = "The Tenant ID of the System Assigned Managed Service Identity"
+  description = "The Tenant ID of the AKS user assigned managed identity"
   value       = azurerm_kubernetes_cluster.aks.identity[0].tenant_id
+}
+
+output "identity_id" {
+  description = "The resource ID of the AKS user assigned managed identity"
+  value       = azurerm_user_assigned_identity.aks.id
 }
 
 output "kubelet_identity" {
   description = "The Kubelet Identity information"
-  value = {
+  value = length(azurerm_kubernetes_cluster.aks.kubelet_identity) > 0 ? {
     client_id                 = azurerm_kubernetes_cluster.aks.kubelet_identity[0].client_id
     object_id                 = azurerm_kubernetes_cluster.aks.kubelet_identity[0].object_id
     user_assigned_identity_id = azurerm_kubernetes_cluster.aks.kubelet_identity[0].user_assigned_identity_id
-  }
+  } : null
 }
 
 output "oidc_issuer_url" {
@@ -90,7 +95,7 @@ output "oidc_issuer_url" {
 
 output "key_vault_secrets_provider_identity" {
   description = "The User Assigned Identity used by the Key Vault Secrets Provider"
-  value = var.enable_key_vault_secrets_provider ? {
+  value = var.enable_key_vault_secrets_provider && length(azurerm_kubernetes_cluster.aks.key_vault_secrets_provider) > 0 ? {
     object_id                 = azurerm_kubernetes_cluster.aks.key_vault_secrets_provider[0].secret_identity[0].object_id
     client_id                 = azurerm_kubernetes_cluster.aks.key_vault_secrets_provider[0].secret_identity[0].client_id
     user_assigned_identity_id = azurerm_kubernetes_cluster.aks.key_vault_secrets_provider[0].secret_identity[0].user_assigned_identity_id
@@ -118,6 +123,11 @@ output "vnet_id" {
 output "subnet_ids" {
   description = "Map of subnet IDs (if created by module)"
   value       = var.create_network_resources ? { for k, v in azurerm_subnet.aks : k => v.id } : null
+}
+
+output "private_dns_zone_id" {
+  description = "The private DNS zone ID used by the AKS private API endpoint"
+  value       = local.effective_private_dns_zone_id
 }
 
 output "log_analytics_workspace_id" {
