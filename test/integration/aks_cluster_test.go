@@ -111,7 +111,7 @@ func validateCluster(t *testing.T, ctx context.Context, cred *azidentity.Default
 	assert.Equal(t, "Succeeded", string(*cluster.Properties.ProvisioningState))
 	assert.True(t, *cluster.Properties.APIServerAccessProfile.EnablePrivateCluster)
 	assert.Equal(t, armcontainerservice.ResourceIdentityTypeUserAssigned, *cluster.Identity.Type)
-	assert.Equal(t, armcontainerservice.ManagedClusterSKUTierFree, *cluster.SKU.Tier)
+	assert.Equal(t, armcontainerservice.ManagedClusterSKUTierStandard, *cluster.SKU.Tier)
 
 	require.NotNil(t, cluster.Properties.NetworkProfile)
 	assert.Equal(t, armcontainerservice.NetworkPluginAzure, *cluster.Properties.NetworkProfile.NetworkPlugin)

@@ -58,7 +58,9 @@ module "aks" {
     max_count                    = 5
     availability_zones           = ["1", "2", "3"]
     only_critical_addons_enabled = true
-    os_disk_type                 = "Managed"
+    os_disk_type                 = "Ephemeral"
+    enable_host_encryption       = true
+    max_pods                     = 50
     os_disk_size_gb              = 128
     ultra_ssd_enabled            = false
     node_labels = {

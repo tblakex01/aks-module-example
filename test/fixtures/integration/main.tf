@@ -59,7 +59,7 @@ module "aks" {
   location                        = azurerm_resource_group.test.location
   resource_group_name             = azurerm_resource_group.test.name
   kubernetes_version              = var.kubernetes_version
-  sku_tier                        = "Free"
+  sku_tier                        = "Standard"
   private_dns_zone_id             = azurerm_private_dns_zone.aks.id
   network_contributor_scope_id    = azurerm_virtual_network.test.id
   assign_network_contributor_role = true
@@ -75,7 +75,9 @@ module "aks" {
     max_count                    = 2
     availability_zones           = []
     only_critical_addons_enabled = true
-    os_disk_type                 = "Managed"
+    os_disk_type                 = "Ephemeral"
+    enable_host_encryption       = true
+    max_pods                     = 50
     os_disk_size_gb              = 128
     ultra_ssd_enabled            = false
     node_labels = {

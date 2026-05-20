@@ -34,6 +34,8 @@ resource "azurerm_subnet" "endpoints" {
   resource_group_name  = azurerm_resource_group.aks.name
   virtual_network_name = azurerm_virtual_network.aks.name
   address_prefixes     = local.subnets.endpoints.address_prefixes
+
+  private_endpoint_network_policies = "Disabled"
 }
 
 # Network Security Group
@@ -159,6 +161,21 @@ resource "azurerm_private_dns_zone_virtual_network_link" "hub" {
   tags                  = var.tags
 }
 
+resource "azurerm_private_dns_zone" "key_vault" {
+  name                = "privatelink.vaultcore.azure.net"
+  resource_group_name = azurerm_resource_group.aks.name
+  tags                = var.tags
+}
+
+resource "azurerm_private_dns_zone_virtual_network_link" "key_vault" {
+  name                  = "vnet-link-key-vault"
+  resource_group_name   = azurerm_resource_group.aks.name
+  private_dns_zone_name = azurerm_private_dns_zone.key_vault.name
+  virtual_network_id    = azurerm_virtual_network.aks.id
+  registration_enabled  = false
+  tags                  = var.tags
+}
+
 # Log Analytics Workspace
 resource "azurerm_log_analytics_workspace" "aks" {
   name                = "law-${var.cluster_name}"
@@ -187,13 +204,19 @@ resource "azurerm_log_analytics_solution" "aks" {
 
 # Key Vault
 resource "azurerm_key_vault" "aks" {
-  name                       = "kv-${substr(replace(var.cluster_name, "-", ""), 0, 17)}"
-  location                   = azurerm_resource_group.aks.location
-  resource_group_name        = azurerm_resource_group.aks.name
-  tenant_id                  = data.azurerm_client_config.current.tenant_id
-  sku_name                   = "standard"
-  soft_delete_retention_days = 90
-  purge_protection_enabled   = true
+  name                          = "kv-${substr(replace(var.cluster_name, "-", ""), 0, 17)}"
+  location                      = azurerm_resource_group.aks.location
+  resource_group_name           = azurerm_resource_group.aks.name
+  tenant_id                     = data.azurerm_client_config.current.tenant_id
+  sku_name                      = "standard"
+  soft_delete_retention_days    = 90
+  purge_protection_enabled      = true
+  public_network_access_enabled = false
+
+  network_acls {
+    default_action = "Deny"
+    bypass         = "AzureServices"
+  }
 
   access_policy {
     tenant_id = data.azurerm_client_config.current.tenant_id
@@ -209,6 +232,26 @@ resource "azurerm_key_vault" "aks" {
   }
 
   tags = var.tags
+}
+
+resource "azurerm_private_endpoint" "key_vault" {
+  name                = "pe-${azurerm_key_vault.aks.name}"
+  location            = azurerm_resource_group.aks.location
+  resource_group_name = azurerm_resource_group.aks.name
+  subnet_id           = azurerm_subnet.endpoints.id
+  tags                = var.tags
+
+  private_service_connection {
+    name                           = "psc-${azurerm_key_vault.aks.name}"
+    private_connection_resource_id = azurerm_key_vault.aks.id
+    subresource_names              = ["vault"]
+    is_manual_connection           = false
+  }
+
+  private_dns_zone_group {
+    name                 = "default"
+    private_dns_zone_ids = [azurerm_private_dns_zone.key_vault.id]
+  }
 }
 
 # AKS Cluster using the module
@@ -236,9 +279,11 @@ module "aks" {
     max_count                    = 3
     availability_zones           = ["1", "2", "3"]
     only_critical_addons_enabled = true
-    os_disk_type                 = "Managed"
+    os_disk_type                 = "Ephemeral"
     os_disk_size_gb              = 128
     ultra_ssd_enabled            = false
+    enable_host_encryption       = true
+    max_pods                     = 50
     node_labels = {
       "nodepool-type"                         = "system"
       "environment"                           = "development"
@@ -259,10 +304,11 @@ module "aks" {
       min_count              = 1
       max_count              = 3
       availability_zones     = ["1", "2", "3"]
-      os_disk_type           = "Managed"
+      os_disk_type           = "Ephemeral"
       os_disk_size_gb        = 256
       ultra_ssd_enabled      = false
-      enable_host_encryption = false
+      enable_host_encryption = true
+      max_pods               = 50
       node_labels = {
         "nodepool-type" = "spark"
         "environment"   = "development"

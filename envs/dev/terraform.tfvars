@@ -6,7 +6,7 @@ resource_group_name = "rg-aks-spark-dev"
 cluster_name        = "aks-spark-dev"
 kubernetes_version  = "1.35"
 node_count          = 1
-sku_tier            = "Free" # Dev uses Free tier
+sku_tier            = "Standard"
 
 # ExpressRoute Configuration
 enable_hub_peering      = false # Not needed for dev

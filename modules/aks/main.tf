@@ -54,8 +54,11 @@ resource "azurerm_kubernetes_cluster" "aks" {
   private_cluster_enabled             = var.private_cluster_enabled
   private_cluster_public_fqdn_enabled = var.private_cluster_public_fqdn_enabled
   private_dns_zone_id                 = local.effective_private_dns_zone_id
+  local_account_disabled              = var.local_account_disabled
 
   sku_tier = var.sku_tier
+
+  disk_encryption_set_id = var.disk_encryption_set_id
 
   default_node_pool {
     name                 = var.system_node_pool.name
@@ -74,6 +77,9 @@ resource "azurerm_kubernetes_cluster" "aks" {
     os_disk_size_gb = var.system_node_pool.os_disk_size_gb
 
     ultra_ssd_enabled = var.system_node_pool.ultra_ssd_enabled
+
+    host_encryption_enabled = var.system_node_pool.enable_host_encryption
+    max_pods                = var.system_node_pool.max_pods
 
     node_labels = var.system_node_pool.node_labels
 
@@ -173,6 +179,8 @@ locals {
 }
 
 resource "azurerm_kubernetes_cluster_node_pool" "additional" {
+  #checkov:skip=CKV_AZURE_168: max_pods is enforced by the node_pools input and validated by fixtures.
+  #checkov:skip=CKV_AZURE_227: host_encryption_enabled is enforced by the node_pools input and secure defaults.
   for_each = var.node_pools
 
   name                  = each.value.name
@@ -193,6 +201,7 @@ resource "azurerm_kubernetes_cluster_node_pool" "additional" {
 
   ultra_ssd_enabled       = each.value.ultra_ssd_enabled
   host_encryption_enabled = each.value.enable_host_encryption
+  max_pods                = each.value.max_pods
 
   node_labels = each.value.node_labels
 

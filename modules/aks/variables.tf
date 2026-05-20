@@ -29,6 +29,12 @@ variable "sku_tier" {
   }
 }
 
+variable "disk_encryption_set_id" {
+  description = "Optional disk encryption set ID for customer-managed encryption of AKS disks."
+  type        = string
+  default     = null
+}
+
 variable "private_cluster_enabled" {
   description = "Should this Kubernetes Cluster have its API server only exposed on internal IP addresses?"
   type        = bool
@@ -39,6 +45,12 @@ variable "private_cluster_public_fqdn_enabled" {
   description = "Specifies whether a Public FQDN for this Private Cluster should be added"
   type        = bool
   default     = false
+}
+
+variable "local_account_disabled" {
+  description = "Disable local admin credentials so access is governed by Azure AD RBAC."
+  type        = bool
+  default     = true
 }
 
 variable "system_node_pool" {
@@ -56,6 +68,8 @@ variable "system_node_pool" {
     os_disk_type                 = string
     os_disk_size_gb              = number
     ultra_ssd_enabled            = bool
+    enable_host_encryption       = optional(bool, true)
+    max_pods                     = optional(number, 50)
     node_labels                  = map(string)
   })
 }
@@ -75,7 +89,8 @@ variable "node_pools" {
     os_disk_type           = string
     os_disk_size_gb        = number
     ultra_ssd_enabled      = bool
-    enable_host_encryption = bool
+    enable_host_encryption = optional(bool, true)
+    max_pods               = optional(number, 50)
     node_labels            = map(string)
     node_taints = list(object({
       key    = string
@@ -312,6 +327,24 @@ variable "key_vault_purge_protection_enabled" {
   description = "Enable purge protection for Key Vault"
   type        = bool
   default     = true
+}
+
+variable "key_vault_public_network_access_enabled" {
+  description = "Allow public data-plane access to the module-managed Key Vault. Keep disabled unless a documented exception exists."
+  type        = bool
+  default     = false
+}
+
+variable "key_vault_private_endpoint_subnet_id" {
+  description = "Subnet ID for the module-managed Key Vault private endpoint. Required when create_key_vault is true and public access is disabled."
+  type        = string
+  default     = null
+}
+
+variable "key_vault_private_dns_zone_ids" {
+  description = "Private DNS zone IDs to associate with the module-managed Key Vault private endpoint."
+  type        = list(string)
+  default     = []
 }
 
 # Network configuration variables
