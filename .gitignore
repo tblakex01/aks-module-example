@@ -54,6 +54,15 @@ vendor/
 *.log
 logs/
 
+# Security review artifacts
+/security_best_practices*.md
+/security_*review*.md
+/security_*report*.md
+/best_practices*.md
+/best-practices*.md
+/threat_model*.md
+/threat-model*.md
+
 # Temporary files
 tmp/
 temp/
