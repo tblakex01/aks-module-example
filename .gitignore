@@ -2,7 +2,6 @@
 *.tfstate
 *.tfstate.*
 .terraform/
-.terraform.lock.hcl
 terraform.tfplan
 tfplan*
 *.backup
@@ -54,6 +53,19 @@ vendor/
 # Logs
 *.log
 logs/
+
+# Security review artifacts
+/security_best_practices*.md
+/security-best-practices*.md
+/security_best-practices*.md
+/security_*review*.md
+/security-review*.md
+/security_*report*.md
+/security-report*.md
+/best_practices*.md
+/best-practices*.md
+/threat_model*.md
+/threat-model*.md
 
 # Temporary files
 tmp/

@@ -44,6 +44,7 @@ resource "azurerm_virtual_network_peering" "hub_to_spoke" {
 
 # Route Table for ExpressRoute Traffic
 resource "azurerm_route_table" "aks_expressroute" {
+  count                         = var.enable_hub_peering ? 1 : 0
   name                          = "rt-aks-expressroute"
   location                      = azurerm_resource_group.aks.location
   resource_group_name           = azurerm_resource_group.aks.name
@@ -54,25 +55,29 @@ resource "azurerm_route_table" "aks_expressroute" {
 
 # Route for internal traffic to go through ExpressRoute
 resource "azurerm_route" "to_onprem_aws" {
+  count               = var.enable_hub_peering ? 1 : 0
   name                = "route-to-onprem-aws"
   resource_group_name = azurerm_resource_group.aks.name
-  route_table_name    = azurerm_route_table.aks_expressroute.name
+  route_table_name    = azurerm_route_table.aks_expressroute[0].name
   address_prefix      = "10.0.0.0/16" # All internal traffic
   next_hop_type       = "VirtualNetworkGateway"
 }
 
 # Associate route table with subnets
 resource "azurerm_subnet_route_table_association" "system" {
+  count          = var.enable_hub_peering ? 1 : 0
   subnet_id      = azurerm_subnet.system.id
-  route_table_id = azurerm_route_table.aks_expressroute.id
+  route_table_id = azurerm_route_table.aks_expressroute[0].id
 }
 
 resource "azurerm_subnet_route_table_association" "spark" {
+  count          = var.enable_hub_peering ? 1 : 0
   subnet_id      = azurerm_subnet.spark.id
-  route_table_id = azurerm_route_table.aks_expressroute.id
+  route_table_id = azurerm_route_table.aks_expressroute[0].id
 }
 
 resource "azurerm_subnet_route_table_association" "endpoints" {
+  count          = var.enable_hub_peering ? 1 : 0
   subnet_id      = azurerm_subnet.endpoints.id
-  route_table_id = azurerm_route_table.aks_expressroute.id
+  route_table_id = azurerm_route_table.aks_expressroute[0].id
 }

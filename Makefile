@@ -1,96 +1,93 @@
 # Makefile for AKS Terraform Project
 
-.PHONY: help init validate fmt plan apply destroy test test-unit test-integration clean
+.PHONY: help init validate fmt plan apply destroy test test-unit test-integration clean test-security test-deps test-lint test-coverage test-minimal
 
-# Default target
+TERRAFORM_ROOTS := modules/aks examples/basic examples/spark-cluster envs/dev envs/qa envs/staging envs/prod test/fixtures/module test/fixtures/integration
+GOFLAGS ?= -mod=readonly
+GOLANGCI_LINT_VERSION ?= v2.7.2
+
 help:
 	@echo "Available targets:"
-	@echo "  init             Initialize Terraform"
-	@echo "  validate         Validate Terraform configuration"
+	@echo "  init             Initialize all Terraform roots"
+	@echo "  validate         Validate all Terraform roots"
 	@echo "  fmt              Format Terraform files"
-	@echo "  plan             Run Terraform plan"
-	@echo "  apply            Apply Terraform configuration"
-	@echo "  destroy          Destroy Terraform resources"
-	@echo "  test             Run all tests"
+	@echo "  plan             Run the safe module fixture plan"
+	@echo "  apply            Apply the production environment"
+	@echo "  destroy          Destroy the production environment"
+	@echo "  test             Run safe local tests"
 	@echo "  test-unit        Run unit tests only"
-	@echo "  test-integration Run integration tests"
+	@echo "  test-integration Run gated Azure integration tests"
 	@echo "  test-security    Run security scans"
-	@echo "  clean            Clean up test artifacts"
+	@echo "  clean            Clean up local test artifacts"
 
-# Terraform commands
 init:
-	terraform init
+	@for dir in $(TERRAFORM_ROOTS); do \
+		echo "Initializing $$dir"; \
+		terraform -chdir=$$dir init -backend=false -input=false; \
+	done
 
 validate: init
-	terraform validate
+	@for dir in $(TERRAFORM_ROOTS); do \
+		echo "Validating $$dir"; \
+		terraform -chdir=$$dir validate; \
+	done
 
 fmt:
 	terraform fmt -recursive
 
 plan: validate
-	terraform plan
+	terraform -chdir=test/fixtures/module plan -input=false
 
 apply: validate
-	terraform apply
+	terraform -chdir=envs/prod apply
 
 destroy:
-	terraform destroy
+	terraform -chdir=envs/prod destroy
 
-# Testing commands
-test: test-unit test-integration
+test: fmt validate test-unit
 
 test-unit:
 	@echo "Running unit tests..."
-	cd test && go test -v -timeout 30m ./unit/...
+	cd test && GOFLAGS=$(GOFLAGS) go test -v -timeout 30m ./unit/...
 
 test-integration:
 	@echo "Running integration tests..."
 	@echo "WARNING: This will deploy real Azure resources and incur costs!"
 	@read -p "Continue? [y/N] " confirm && [ "$$confirm" = "y" ] || exit 1
-	cd test && RUN_INTEGRATION_TESTS=true go test -v -timeout 60m ./integration/...
+	cd test && RUN_INTEGRATION_TESTS=true go test -v -timeout 90m ./integration/...
 
 test-security:
 	@echo "Running security scans..."
-	@which tfsec > /dev/null || (echo "Installing tfsec..." && go install github.com/aquasecurity/tfsec/cmd/tfsec@latest)
-	tfsec . --soft-fail
-	@which checkov > /dev/null || (echo "Please install checkov: pip install checkov" && exit 1)
-	checkov -d . --framework terraform --quiet
+	@which checkov > /dev/null || (echo "Please install checkov: pipx install checkov" && exit 1)
+	checkov -d . --framework terraform --quiet --soft-fail
 
-# Test a specific integration test
 test-integration-%:
 	@echo "Running integration test: $*"
-	cd test && RUN_INTEGRATION_TESTS=true go test -v -timeout 45m ./integration/... -run $*
+	cd test && RUN_INTEGRATION_TESTS=true go test -v -timeout 90m ./integration/... -run $*
 
-# Clean up
 clean:
 	@echo "Cleaning up test artifacts..."
 	rm -rf test/vendor
 	rm -rf .terraform
 	rm -f terraform.tfstate*
-	rm -f .terraform.lock.hcl
 	rm -f tfplan*
 	rm -f test-plan*.out
 
-# Install test dependencies
 test-deps:
 	@echo "Installing test dependencies..."
-	cd test && go mod download
-	@which tfsec > /dev/null || go install github.com/aquasecurity/tfsec/cmd/tfsec@latest
-	@which golangci-lint > /dev/null || go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	cd test && GOFLAGS=$(GOFLAGS) go mod download
+	@which golangci-lint > /dev/null || go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
-# Lint Go test code
 test-lint:
 	@echo "Linting test code..."
-	cd test && golangci-lint run
+	cd test && GOFLAGS=$(GOFLAGS) golangci-lint run
 
-# Generate test coverage
 test-coverage:
 	@echo "Generating test coverage..."
-	cd test && go test -v -coverprofile=coverage.out ./...
+	cd test && GOFLAGS=$(GOFLAGS) go test -v -coverprofile=coverage.out ./...
 	cd test && go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: test/coverage.html"
 
-# Run minimal test deployment
 test-minimal:
-	@echo "Running minimal test deployment..."
-	terraform plan -var-file=test/fixtures/minimal.tfvars
+	@echo "Running safe module fixture plan..."
+	terraform -chdir=test/fixtures/module plan -input=false

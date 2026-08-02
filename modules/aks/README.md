@@ -22,35 +22,41 @@ This module creates a production-ready Azure Kubernetes Service (AKS) cluster wi
 module "aks" {
   source = "./modules/aks"
 
-  cluster_name        = "my-aks-cluster"
-  location            = "East US"
-  resource_group_name = "rg-aks-prod"
-  kubernetes_version  = "1.28.5"
+  cluster_name                    = "my-aks-cluster"
+  location                        = "East US"
+  resource_group_name             = "rg-aks-prod"
+  kubernetes_version              = "1.35"
+  network_contributor_scope_id    = azurerm_virtual_network.main.id
+  assign_network_contributor_role = true
   
   system_node_pool = {
     name                         = "system"
     vm_size                      = "Standard_D4s_v3"
     node_count                   = 3
     subnet_id                    = azurerm_subnet.system.id
-    enable_auto_scaling          = true
+    auto_scaling_enabled         = true
     min_count                    = 1
     max_count                    = 5
     availability_zones           = ["1", "2", "3"]
     only_critical_addons_enabled = true
-    os_disk_type                 = "Managed"
+    os_disk_type                 = "Ephemeral"
     os_disk_size_gb              = 128
     ultra_ssd_enabled            = false
-    node_labels                  = {
+    enable_host_encryption       = true
+    max_pods                     = 50
+    node_labels = {
       "nodepool-type" = "system"
     }
   }
   
   network_profile = {
-    network_plugin = "azure"
-    network_policy = "azure"
-    dns_service_ip = "10.0.0.10"
-    service_cidr   = "10.0.0.0/16"
-    outbound_type  = "loadBalancer"
+    network_plugin      = "azure"
+    network_plugin_mode = "overlay"
+    network_data_plane  = "cilium"
+    network_policy      = "cilium"
+    dns_service_ip      = "172.16.0.10"
+    service_cidr        = "172.16.0.0/16"
+    outbound_type       = "loadBalancer"
   }
   
   azure_ad_rbac = {
@@ -58,6 +64,7 @@ module "aks" {
     azure_rbac_enabled = true
     tenant_id          = data.azurerm_client_config.current.tenant_id
   }
+  create_monitoring_resources = true
   
   tags = {
     Environment = "Production"
@@ -72,11 +79,15 @@ module "aks" {
 module "aks" {
   source = "./modules/aks"
 
-  cluster_name        = "aks-spark-cluster"
-  location            = "East US"
-  resource_group_name = azurerm_resource_group.main.name
-  kubernetes_version  = "1.28.5"
-  sku_tier            = "Standard"
+  cluster_name                    = "aks-spark-cluster"
+  location                        = "East US"
+  resource_group_name             = azurerm_resource_group.main.name
+  kubernetes_version              = "1.35"
+  sku_tier                        = "Standard"
+  private_dns_zone_id             = azurerm_private_dns_zone.aks.id
+  network_contributor_scope_id    = azurerm_virtual_network.main.id
+  assign_private_dns_zone_role    = true
+  assign_network_contributor_role = true
   
   # System node pool for Kubernetes system components
   system_node_pool = {
@@ -84,14 +95,16 @@ module "aks" {
     vm_size                      = "Standard_D8s_v3"
     node_count                   = 3
     subnet_id                    = azurerm_subnet.system.id
-    enable_auto_scaling          = true
+    auto_scaling_enabled         = true
     min_count                    = 1
     max_count                    = 5
     availability_zones           = ["1", "2", "3"]
     only_critical_addons_enabled = true
-    os_disk_type                 = "Managed"
+    os_disk_type                 = "Ephemeral"
     os_disk_size_gb              = 128
     ultra_ssd_enabled            = false
+    enable_host_encryption       = true
+    max_pods                     = 50
     node_labels = {
       "nodepool-type" = "system"
       "environment"   = "production"
@@ -106,14 +119,15 @@ module "aks" {
       node_count             = 3
       subnet_id              = azurerm_subnet.spark.id
       mode                   = "User"
-      enable_auto_scaling    = true
+      auto_scaling_enabled   = true
       min_count              = 4
       max_count              = 10
       availability_zones     = ["1", "2", "3"]
-      os_disk_type           = "Managed"
+      os_disk_type           = "Ephemeral"
       os_disk_size_gb        = 256
       ultra_ssd_enabled      = false
-      enable_host_encryption = false
+      enable_host_encryption = true
+      max_pods               = 50
       node_labels = {
         "workload-type" = "apache-spark"
       }
@@ -132,14 +146,15 @@ module "aks" {
       node_count             = 2 # Initial count for spot
       subnet_id              = azurerm_subnet.spark.id # Assuming same subnet
       mode                   = "User"
-      enable_auto_scaling    = true
+      auto_scaling_enabled   = true
       min_count              = 1
       max_count              = 10
       availability_zones     = ["1", "2", "3"]
-      os_disk_type           = "Managed"
+      os_disk_type           = "Ephemeral"
       os_disk_size_gb        = 256
       ultra_ssd_enabled      = false
-      enable_host_encryption = false
+      enable_host_encryption = true
+      max_pods               = 50
       node_labels = {
         "workload-type" = "apache-spark-spot"
         "priority"      = "spot"
@@ -161,11 +176,13 @@ module "aks" {
   
   # Network configuration
   network_profile = {
-    network_plugin = "azure"
-    network_policy = "azure"
-    dns_service_ip = "10.0.0.10"
-    service_cidr   = "10.0.0.0/16"
-    outbound_type  = "loadBalancer"
+    network_plugin      = "azure"
+    network_plugin_mode = "overlay"
+    network_data_plane  = "cilium"
+    network_policy      = "cilium"
+    dns_service_ip      = "172.16.0.10"
+    service_cidr        = "172.16.0.0/16"
+    outbound_type       = "loadBalancer"
     load_balancer_profile = {
       managed_outbound_ip_count = 2
       outbound_ports_allocated  = 8000
@@ -196,7 +213,7 @@ module "aks" {
     hours = [2, 6]
   }
   
-  automatic_channel_upgrade = "patch"
+  automatic_upgrade_channel = "patch"
   
   tags = {
     Environment = "Production"
@@ -209,14 +226,14 @@ module "aks" {
 
 | Name | Version |
 |------|---------|
-| terraform | >= 1.0 |
-| azurerm | >= 3.0 |
+| terraform | >= 1.15.0, < 2.0.0 |
+| azurerm | ~> 4.73 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| azurerm | >= 3.0 |
+| azurerm | ~> 4.73 |
 
 ## Inputs
 
@@ -230,16 +247,26 @@ module "aks" {
 | network_profile | Network profile configuration for the cluster | `object` | n/a | yes |
 | azure_ad_rbac | Azure AD RBAC configuration | `object` | n/a | yes |
 | sku_tier | The SKU Tier that should be used for this Kubernetes Cluster | `string` | `"Standard"` | no |
+| disk_encryption_set_id | Optional disk encryption set ID for customer-managed encryption of AKS disks | `string` | `null` | no |
+| local_account_disabled | Disable local admin credentials so access is governed by Azure AD RBAC | `bool` | `true` | no |
 | node_pools | Map of additional node pools to create. See `object` structure below. | `map(object)` | `{}` | no |
 | private_cluster_enabled | Should this Kubernetes Cluster have its API server only exposed on internal IP addresses? | `bool` | `true` | no |
 | enable_monitoring | Enable Azure Monitor for containers | `bool` | `true` | no |
 | log_analytics_workspace_id | ID of the Log Analytics workspace for monitoring | `string` | `null` | no |
+| create_monitoring_resources | Whether to create a Log Analytics workspace within the module | `bool` | `false` | no |
 | azure_policy_enabled | Should Azure Policy be enabled on the cluster | `bool` | `true` | no |
 | enable_key_vault_secrets_provider | Enable Key Vault Secrets Provider | `bool` | `true` | no |
 | workload_identity_enabled | Enable workload identity | `bool` | `true` | no |
 | oidc_issuer_enabled | Enable OIDC issuer | `bool` | `true` | no |
+| key_vault_public_network_access_enabled | Allow public data-plane access to the module-managed Key Vault | `bool` | `false` | no |
+| key_vault_private_endpoint_subnet_id | Subnet ID for the module-managed Key Vault private endpoint | `string` | `null` | no |
+| key_vault_private_dns_zone_ids | Private DNS zone IDs to associate with the module-managed Key Vault private endpoint | `list(string)` | `[]` | no |
 | maintenance_window | Maintenance window configuration | `object` | `null` | no |
-| automatic_channel_upgrade | The automatic upgrade channel for the cluster | `string` | `"patch"` | no |
+| automatic_upgrade_channel | The automatic upgrade channel for the cluster | `string` | `"patch"` | no |
+| network_contributor_scope_id | Network scope where the AKS control plane identity receives Network Contributor before cluster creation | `string` | `null` | no |
+| assign_network_contributor_role | Assign Network Contributor on `network_contributor_scope_id` for externally managed networks | `bool` | `false` | no |
+| private_dns_zone_id | Private DNS zone ID for private AKS API records | `string` | `null` | no |
+| assign_private_dns_zone_role | Assign Private DNS Zone Contributor on `private_dns_zone_id` for externally managed private DNS zones | `bool` | `false` | no |
 | tags | Tags to apply to all resources | `map(string)` | `{}` | no |
 
 ### `node_pools` Object Structure
@@ -250,17 +277,18 @@ Each object in the `node_pools` map can have the following attributes:
 |-----------|-------------|------|---------|:--------:|
 | `name` | Name of the node pool | `string` | n/a | yes |
 | `vm_size` | VM size for the nodes | `string` | n/a | yes |
-| `node_count` | Initial number of nodes (if auto-scaling is disabled) | `number` | n/a | yes (if `enable_auto_scaling` is `false`) |
+| `node_count` | Initial number of nodes (if auto-scaling is disabled) | `number` | n/a | yes (if `auto_scaling_enabled` is `false`) |
 | `subnet_id` | Subnet ID for the node pool | `string` | n/a | yes |
 | `mode` | Mode of the node pool (System or User) | `string` | `"User"` | no |
-| `enable_auto_scaling` | Enable auto-scaling for the node pool | `bool` | `true` | no |
+| `auto_scaling_enabled` | Enable auto-scaling for the node pool | `bool` | `true` | no |
 | `min_count` | Minimum number of nodes for auto-scaling | `number` | `1` | no |
 | `max_count` | Maximum number of nodes for auto-scaling | `number` | `5` | no |
 | `availability_zones` | List of availability zones | `list(string)` | `null` | no |
-| `os_disk_type` | OS disk type (Managed or Ephemeral) | `string` | `"Managed"` | no |
+| `os_disk_type` | OS disk type (Managed or Ephemeral) | `string` | n/a | yes |
 | `os_disk_size_gb` | OS disk size in GB | `number` | `128` | no |
 | `ultra_ssd_enabled` | Enable Ultra SSD | `bool` | `false` | no |
-| `enable_host_encryption` | Enable host-based encryption | `bool` | `false` | no |
+| `enable_host_encryption` | Enable host-based encryption | `bool` | `true` | no |
+| `max_pods` | Maximum pods per node | `number` | `50` | no |
 | `node_labels` | Map of labels to apply to nodes | `map(string)` | `{}` | no |
 | `node_taints` | List of taints to apply to nodes | `list(object)` | `[]` | no |
 | `tags` | Tags to apply to the node pool | `map(string)` | `{}` | no |

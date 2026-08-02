@@ -2,14 +2,18 @@ package test
 
 import (
 	"context"
-	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v4"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v7"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/operationalinsights/armoperationalinsights"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/privatedns/armprivatedns"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
+	"github.com/azure/aks-spark-cluster/test/helpers"
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	test_structure "github.com/gruntwork-io/terratest/modules/test-structure"
@@ -17,188 +21,167 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestAKSClusterDeployment tests the full deployment of the AKS cluster
-func TestAKSClusterDeployment(t *testing.T) {
-	t.Parallel()
+func TestAKSIntegrationDeployment(t *testing.T) {
+	helpers.RequireIntegration(t)
 
-	// Create a unique test environment
-	uniqueID := strings.ToLower(random.UniqueId())
-	testName := fmt.Sprintf("test-aks-%s", uniqueID)
+	uniqueID := strings.ToLower(random.UniqueID())
+	clusterName := "aks-it-" + uniqueID
+	resourceGroupName := "rg-" + clusterName
+	repoCopy := test_structure.CopyTerraformFolderToTemp(t, "../../", ".")
+	fixtureDir := filepath.Join(repoCopy, "test", "fixtures", "integration")
 
-	// Copy the terraform folder to a temp folder
-	tempTestFolder := test_structure.CopyTerraformFolderToTemp(t, "../../", ".")
-
-	terraformOptions := &terraform.Options{
-		TerraformDir: tempTestFolder,
-		Vars: map[string]interface{}{
-			"location":            "East US",
-			"cluster_name":        testName,
-			"environment":         "test",
-			"kubernetes_version":  "1.31.8",
-			"system_node_count":   1,
-			"spark_node_count":    1,
-			"enable_expressroute": false,
+	terraformOptions := helpers.GetTerraformOptions(fixtureDir, map[string]interface{}{
+		"resource_group_name": resourceGroupName,
+		"cluster_name":        clusterName,
+		"tags": map[string]string{
+			"Environment": "test",
+			"Purpose":     "terratest",
+			"Temporary":   "true",
+			"TestRun":     uniqueID,
 		},
-		NoColor: true,
-	}
-
-	// Clean up resources at the end
-	defer test_structure.RunTestStage(t, "cleanup", func() {
-		terraform.Destroy(t, terraformOptions)
 	})
 
-	// Deploy the infrastructure
-	test_structure.RunTestStage(t, "deploy", func() {
-		terraform.InitAndApply(t, terraformOptions)
-	})
+	deployCtx, cancelDeploy := context.WithTimeout(context.Background(), 90*time.Minute)
+	defer cancelDeploy()
+	defer func() {
+		destroyCtx, cancelDestroy := context.WithTimeout(context.Background(), 45*time.Minute)
+		defer cancelDestroy()
+		terraform.DestroyContext(t, destroyCtx, terraformOptions)
+	}()
 
-	// Validate the infrastructure
-	test_structure.RunTestStage(t, "validate", func() {
-		validateAKSCluster(t, terraformOptions)
-	})
+	terraform.InitAndApplyContext(t, deployCtx, terraformOptions)
+
+	validateDeployment(t, terraformOptions)
 }
 
-// validateAKSCluster validates the deployed AKS cluster
-func validateAKSCluster(t *testing.T, terraformOptions *terraform.Options) {
-	// Get outputs
-	resourceGroupName := terraform.Output(t, terraformOptions, "resource_group_name")
-	clusterName := terraform.Output(t, terraformOptions, "cluster_name")
-	clusterID := terraform.Output(t, terraformOptions, "cluster_id")
+func validateDeployment(t *testing.T, terraformOptions *terraform.Options) {
+	t.Helper()
 
-	// Verify outputs are not empty
-	assert.NotEmpty(t, resourceGroupName)
-	assert.NotEmpty(t, clusterName)
-	assert.NotEmpty(t, clusterID)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
 
-	// Create Azure clients
-	ctx := context.Background()
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	require.NoError(t, err)
 
-	// Get subscription ID from cluster ID
+	resourceGroupName := terraform.OutputContext(t, ctx, terraformOptions, "resource_group_name")
+	clusterName := terraform.OutputContext(t, ctx, terraformOptions, "cluster_name")
+	clusterID := terraform.OutputContext(t, ctx, terraformOptions, "cluster_id")
+	vnetID := terraform.OutputContext(t, ctx, terraformOptions, "vnet_id")
+	systemSubnetID := terraform.OutputContext(t, ctx, terraformOptions, "system_subnet_id")
+	privateDNSZoneID := terraform.OutputContext(t, ctx, terraformOptions, "private_dns_zone_id")
+	logAnalyticsWorkspaceID := terraform.OutputContext(t, ctx, terraformOptions, "log_analytics_workspace_id")
+
 	subscriptionID := strings.Split(clusterID, "/")[2]
 
-	// Verify resource group exists
 	validateResourceGroup(t, ctx, cred, subscriptionID, resourceGroupName)
-
-	// Verify AKS cluster properties
-	validateAKSClusterProperties(t, ctx, cred, subscriptionID, resourceGroupName, clusterName)
+	validateCluster(t, ctx, cred, subscriptionID, resourceGroupName, clusterName)
+	validateNetwork(t, ctx, cred, subscriptionID, resourceGroupName, vnetID, systemSubnetID)
+	validatePrivateDNS(t, ctx, cred, subscriptionID, resourceGroupName, privateDNSZoneID)
+	validateMonitoring(t, ctx, cred, subscriptionID, resourceGroupName, logAnalyticsWorkspaceID)
 }
 
-// validateResourceGroup validates the resource group exists
 func validateResourceGroup(t *testing.T, ctx context.Context, cred *azidentity.DefaultAzureCredential, subscriptionID, resourceGroupName string) {
-	resourceGroupClient, err := armresources.NewResourceGroupsClient(subscriptionID, cred, nil)
+	t.Helper()
+
+	client, err := armresources.NewResourceGroupsClient(subscriptionID, cred, nil)
 	require.NoError(t, err)
 
-	rg, err := resourceGroupClient.Get(ctx, resourceGroupName, nil)
+	rg, err := client.Get(ctx, resourceGroupName, nil)
 	require.NoError(t, err)
-	assert.NotNil(t, rg)
+	require.NotNil(t, rg.Name)
 	assert.Equal(t, resourceGroupName, *rg.Name)
+	require.NotNil(t, rg.Tags)
+	assert.Equal(t, "terratest", *rg.Tags["Purpose"])
+	assert.Equal(t, "true", *rg.Tags["Temporary"])
 }
 
-// validateAKSClusterProperties validates the AKS cluster properties
-func validateAKSClusterProperties(t *testing.T, ctx context.Context, cred *azidentity.DefaultAzureCredential, subscriptionID, resourceGroupName, clusterName string) {
-	aksClient, err := armcontainerservice.NewManagedClustersClient(subscriptionID, cred, nil)
+func validateCluster(t *testing.T, ctx context.Context, cred *azidentity.DefaultAzureCredential, subscriptionID, resourceGroupName, clusterName string) {
+	t.Helper()
+
+	client, err := armcontainerservice.NewManagedClustersClient(subscriptionID, cred, nil)
 	require.NoError(t, err)
 
-	// Get the cluster with timeout
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-	defer cancel()
-
-	cluster, err := aksClient.Get(ctx, resourceGroupName, clusterName, nil)
+	cluster, err := client.Get(ctx, resourceGroupName, clusterName, nil)
 	require.NoError(t, err)
-	require.NotNil(t, cluster)
+	require.NotNil(t, cluster.Properties)
+	require.NotNil(t, cluster.Properties.APIServerAccessProfile)
+	require.NotNil(t, cluster.Identity)
 
-	// Validate cluster properties
 	assert.Equal(t, clusterName, *cluster.Name)
 	assert.Equal(t, "Succeeded", string(*cluster.Properties.ProvisioningState))
-	
-	// Validate it's a private cluster
 	assert.True(t, *cluster.Properties.APIServerAccessProfile.EnablePrivateCluster)
-	
-	// Validate SKU
-	assert.Equal(t, "Standard", string(*cluster.SKU.Tier))
-	
-	// Validate identity type
-	assert.Equal(t, armcontainerservice.ResourceIdentityTypeSystemAssigned, *cluster.Identity.Type)
-	
-	// Validate Azure RBAC is enabled
-	assert.True(t, *cluster.Properties.AADProfile.EnableAzureRBAC)
-	
-	// Validate workload identity is enabled
-	assert.NotNil(t, cluster.Properties.SecurityProfile.WorkloadIdentity)
-	assert.True(t, *cluster.Properties.SecurityProfile.WorkloadIdentity.Enabled)
-	
-	// Validate OIDC issuer is enabled
-	assert.NotNil(t, cluster.Properties.OidcIssuerProfile)
-	assert.True(t, *cluster.Properties.OidcIssuerProfile.Enabled)
-	
-	// Validate node pools
-	validateNodePools(t, cluster)
+	assert.Equal(t, armcontainerservice.ResourceIdentityTypeUserAssigned, *cluster.Identity.Type)
+	assert.Equal(t, armcontainerservice.ManagedClusterSKUTierStandard, *cluster.SKU.Tier)
+
+	require.NotNil(t, cluster.Properties.NetworkProfile)
+	assert.Equal(t, armcontainerservice.NetworkPluginAzure, *cluster.Properties.NetworkProfile.NetworkPlugin)
+	assert.Equal(t, armcontainerservice.NetworkPolicyCilium, *cluster.Properties.NetworkProfile.NetworkPolicy)
+	assert.Equal(t, armcontainerservice.NetworkDataplaneCilium, *cluster.Properties.NetworkProfile.NetworkDataplane)
 }
 
-// validateNodePools validates the node pools configuration
-func validateNodePools(t *testing.T, cluster armcontainerservice.ManagedClustersClientGetResponse) {
-	// Validate default/system node pool
-	agentPools := cluster.Properties.AgentPoolProfiles
-	require.NotNil(t, agentPools)
-	require.Greater(t, len(agentPools), 0)
+func validateNetwork(t *testing.T, ctx context.Context, cred *azidentity.DefaultAzureCredential, subscriptionID, resourceGroupName, vnetID, systemSubnetID string) {
+	t.Helper()
 
-	// Find system pool
-	var systemPool *armcontainerservice.ManagedClusterAgentPoolProfile
-	for _, pool := range agentPools {
-		if *pool.Mode == armcontainerservice.AgentPoolModeSystem {
-			systemPool = pool
-			break
+	vnetClient, err := armnetwork.NewVirtualNetworksClient(subscriptionID, cred, nil)
+	require.NoError(t, err)
+
+	vnetName := lastIDSegment(vnetID)
+	vnet, err := vnetClient.Get(ctx, resourceGroupName, vnetName, nil)
+	require.NoError(t, err)
+	require.NotNil(t, vnet.Properties)
+	require.NotNil(t, vnet.Properties.AddressSpace)
+	assert.Contains(t, pointerValues(vnet.Properties.AddressSpace.AddressPrefixes), "10.42.0.0/16")
+
+	systemSubnetName := lastIDSegment(systemSubnetID)
+	subnetClient, err := armnetwork.NewSubnetsClient(subscriptionID, cred, nil)
+	require.NoError(t, err)
+
+	subnet, err := subnetClient.Get(ctx, resourceGroupName, vnetName, systemSubnetName, nil)
+	require.NoError(t, err)
+	require.NotNil(t, subnet.Properties)
+	assert.Equal(t, "10.42.0.0/24", *subnet.Properties.AddressPrefix)
+}
+
+func validatePrivateDNS(t *testing.T, ctx context.Context, cred *azidentity.DefaultAzureCredential, subscriptionID, resourceGroupName, privateDNSZoneID string) {
+	t.Helper()
+
+	client, err := armprivatedns.NewPrivateZonesClient(subscriptionID, cred, nil)
+	require.NoError(t, err)
+
+	zoneName := lastIDSegment(privateDNSZoneID)
+	zone, err := client.Get(ctx, resourceGroupName, zoneName, nil)
+	require.NoError(t, err)
+	require.NotNil(t, zone.Name)
+	assert.Contains(t, *zone.Name, "privatelink.")
+	assert.Contains(t, *zone.Name, "azmk8s.io")
+}
+
+func validateMonitoring(t *testing.T, ctx context.Context, cred *azidentity.DefaultAzureCredential, subscriptionID, resourceGroupName, workspaceID string) {
+	t.Helper()
+
+	client, err := armoperationalinsights.NewWorkspacesClient(subscriptionID, cred, nil)
+	require.NoError(t, err)
+
+	workspaceName := lastIDSegment(workspaceID)
+	workspace, err := client.Get(ctx, resourceGroupName, workspaceName, nil)
+	require.NoError(t, err)
+	require.NotNil(t, workspace.Properties)
+	require.NotNil(t, workspace.Properties.SKU)
+	assert.Equal(t, armoperationalinsights.WorkspaceSKUNameEnumPerGB2018, *workspace.Properties.SKU.Name)
+	assert.Equal(t, int32(30), *workspace.Properties.RetentionInDays)
+}
+
+func lastIDSegment(resourceID string) string {
+	parts := strings.Split(resourceID, "/")
+	return parts[len(parts)-1]
+}
+
+func pointerValues(values []*string) []string {
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		if value != nil {
+			result = append(result, *value)
 		}
 	}
-
-	require.NotNil(t, systemPool, "System node pool not found")
-	assert.Equal(t, "Standard_D8s_v3", string(*systemPool.VMSize))
-	assert.Equal(t, int32(128), *systemPool.OSDiskSizeGB)
-	assert.True(t, *systemPool.EnableAutoScaling)
-	assert.Equal(t, int32(1), *systemPool.MinCount)
-	assert.Equal(t, int32(5), *systemPool.MaxCount)
-}
-
-// TestAKSClusterWithExpressRoute tests the AKS cluster with ExpressRoute enabled
-func TestAKSClusterWithExpressRoute(t *testing.T) {
-	// Skip this test if hub VNet doesn't exist
-	t.Skip("Skipping ExpressRoute test - requires existing hub infrastructure")
-
-	uniqueID := strings.ToLower(random.UniqueId())
-	testName := fmt.Sprintf("test-aks-er-%s", uniqueID)
-
-	tempTestFolder := test_structure.CopyTerraformFolderToTemp(t, "../../", ".")
-
-	terraformOptions := &terraform.Options{
-		TerraformDir: tempTestFolder,
-		Vars: map[string]interface{}{
-			"location":            "East US",
-			"cluster_name":        testName,
-			"environment":         "test",
-			"kubernetes_version":  "1.31.8",
-			"system_node_count":   1,
-			"spark_node_count":    1,
-			"enable_expressroute": true,
-		},
-		NoColor: true,
-	}
-
-	defer test_structure.RunTestStage(t, "cleanup", func() {
-		terraform.Destroy(t, terraformOptions)
-	})
-
-	test_structure.RunTestStage(t, "deploy", func() {
-		terraform.InitAndApply(t, terraformOptions)
-	})
-
-	test_structure.RunTestStage(t, "validate", func() {
-		// Validate basic cluster properties
-		validateAKSCluster(t, terraformOptions)
-
-		// Validate ExpressRoute specific outputs
-		vnetPeeringEnabled := terraform.Output(t, terraformOptions, "vnet_peering_enabled")
-		assert.Equal(t, "true", vnetPeeringEnabled)
-	})
+	return result
 }

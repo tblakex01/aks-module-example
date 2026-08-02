@@ -34,6 +34,8 @@ resource "azurerm_subnet" "endpoints" {
   resource_group_name  = azurerm_resource_group.aks.name
   virtual_network_name = azurerm_virtual_network.aks.name
   address_prefixes     = local.subnets.endpoints.address_prefixes
+
+  private_endpoint_network_policies = "Disabled"
 }
 
 # Network Security Group
@@ -159,6 +161,21 @@ resource "azurerm_private_dns_zone_virtual_network_link" "hub" {
   tags                  = var.tags
 }
 
+resource "azurerm_private_dns_zone" "key_vault" {
+  name                = "privatelink.vaultcore.azure.net"
+  resource_group_name = azurerm_resource_group.aks.name
+  tags                = var.tags
+}
+
+resource "azurerm_private_dns_zone_virtual_network_link" "key_vault" {
+  name                  = "vnet-link-key-vault"
+  resource_group_name   = azurerm_resource_group.aks.name
+  private_dns_zone_name = azurerm_private_dns_zone.key_vault.name
+  virtual_network_id    = azurerm_virtual_network.aks.id
+  registration_enabled  = false
+  tags                  = var.tags
+}
+
 # Log Analytics Workspace
 resource "azurerm_log_analytics_workspace" "aks" {
   name                = "law-${var.cluster_name}"
@@ -187,13 +204,19 @@ resource "azurerm_log_analytics_solution" "aks" {
 
 # Key Vault
 resource "azurerm_key_vault" "aks" {
-  name                       = "kv-${substr(replace(var.cluster_name, "-", ""), 0, 17)}"
-  location                   = azurerm_resource_group.aks.location
-  resource_group_name        = azurerm_resource_group.aks.name
-  tenant_id                  = data.azurerm_client_config.current.tenant_id
-  sku_name                   = "standard"
-  soft_delete_retention_days = 90
-  purge_protection_enabled   = true
+  name                          = "kv-${substr(replace(var.cluster_name, "-", ""), 0, 17)}"
+  location                      = azurerm_resource_group.aks.location
+  resource_group_name           = azurerm_resource_group.aks.name
+  tenant_id                     = data.azurerm_client_config.current.tenant_id
+  sku_name                      = "standard"
+  soft_delete_retention_days    = 90
+  purge_protection_enabled      = true
+  public_network_access_enabled = false
+
+  network_acls {
+    default_action = "Deny"
+    bypass         = "AzureServices"
+  }
 
   access_policy {
     tenant_id = data.azurerm_client_config.current.tenant_id
@@ -211,15 +234,39 @@ resource "azurerm_key_vault" "aks" {
   tags = var.tags
 }
 
+resource "azurerm_private_endpoint" "key_vault" {
+  name                = "pe-${azurerm_key_vault.aks.name}"
+  location            = azurerm_resource_group.aks.location
+  resource_group_name = azurerm_resource_group.aks.name
+  subnet_id           = azurerm_subnet.endpoints.id
+  tags                = var.tags
+
+  private_service_connection {
+    name                           = "psc-${azurerm_key_vault.aks.name}"
+    private_connection_resource_id = azurerm_key_vault.aks.id
+    subresource_names              = ["vault"]
+    is_manual_connection           = false
+  }
+
+  private_dns_zone_group {
+    name                 = "default"
+    private_dns_zone_ids = [azurerm_private_dns_zone.key_vault.id]
+  }
+}
+
 # AKS Cluster using the module
 module "aks" {
   source = "../../modules/aks"
 
-  cluster_name        = var.cluster_name
-  location            = azurerm_resource_group.aks.location
-  resource_group_name = azurerm_resource_group.aks.name
-  kubernetes_version  = var.kubernetes_version
-  sku_tier            = var.sku_tier
+  cluster_name                    = var.cluster_name
+  location                        = azurerm_resource_group.aks.location
+  resource_group_name             = azurerm_resource_group.aks.name
+  kubernetes_version              = var.kubernetes_version
+  sku_tier                        = var.sku_tier
+  private_dns_zone_id             = azurerm_private_dns_zone.aks.id
+  network_contributor_scope_id    = azurerm_virtual_network.aks.id
+  assign_network_contributor_role = true
+  assign_private_dns_zone_role    = true
 
   # System node pool configuration
   system_node_pool = {
@@ -227,14 +274,16 @@ module "aks" {
     vm_size                      = local.system_vm_size
     node_count                   = var.node_count
     subnet_id                    = azurerm_subnet.system.id
-    enable_auto_scaling          = true
+    auto_scaling_enabled         = true
     min_count                    = 1
     max_count                    = 5
     availability_zones           = ["1", "2", "3"]
     only_critical_addons_enabled = true
-    os_disk_type                 = "Managed"
+    os_disk_type                 = "Ephemeral"
     os_disk_size_gb              = 128
     ultra_ssd_enabled            = false
+    enable_host_encryption       = true
+    max_pods                     = 50
     node_labels = {
       "nodepool-type"                         = "system"
       "environment"                           = "production"
@@ -251,14 +300,15 @@ module "aks" {
       node_count             = var.node_count
       subnet_id              = azurerm_subnet.spark.id
       mode                   = "User"
-      enable_auto_scaling    = true
+      auto_scaling_enabled   = true
       min_count              = 4
       max_count              = 10
       availability_zones     = ["1", "2", "3"]
-      os_disk_type           = "Managed"
+      os_disk_type           = "Ephemeral"
       os_disk_size_gb        = 256
       ultra_ssd_enabled      = false
-      enable_host_encryption = false
+      enable_host_encryption = true
+      max_pods               = 50
       node_labels = {
         "nodepool-type" = "spark"
         "environment"   = "production"
@@ -278,11 +328,14 @@ module "aks" {
 
   # Network configuration
   network_profile = {
-    network_plugin = "azure"
-    network_policy = "azure"
-    dns_service_ip = "10.0.0.10"
-    service_cidr   = "10.0.0.0/16"
-    outbound_type  = "loadBalancer"
+    network_plugin      = "azure"
+    network_plugin_mode = "overlay"
+    network_policy      = "cilium"
+    network_data_plane  = "cilium"
+    dns_service_ip      = local.dns_service_ip
+    service_cidr        = local.service_cidr
+    pod_cidr            = local.pod_cidr
+    outbound_type       = "loadBalancer"
     load_balancer_profile = {
       managed_outbound_ip_count = 2
       outbound_ports_allocated  = 8000

@@ -4,7 +4,7 @@
 location            = "East US"
 resource_group_name = "rg-aks-spark-staging"
 cluster_name        = "aks-spark-staging"
-kubernetes_version  = "1.31.8"
+kubernetes_version  = "1.35"
 node_count          = 2
 sku_tier            = "Standard" # Staging uses Standard for reliability testing
 

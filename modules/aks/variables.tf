@@ -14,8 +14,9 @@ variable "resource_group_name" {
 }
 
 variable "kubernetes_version" {
-  description = "Kubernetes version for the cluster"
+  description = "Kubernetes minor version for the cluster. Use a supported GA AKS version such as 1.35."
   type        = string
+  default     = "1.35"
 }
 
 variable "sku_tier" {
@@ -26,6 +27,12 @@ variable "sku_tier" {
     condition     = contains(["Free", "Standard"], var.sku_tier)
     error_message = "SKU tier must be either Free or Standard."
   }
+}
+
+variable "disk_encryption_set_id" {
+  description = "Optional disk encryption set ID for customer-managed encryption of AKS disks."
+  type        = string
+  default     = null
 }
 
 variable "private_cluster_enabled" {
@@ -40,6 +47,12 @@ variable "private_cluster_public_fqdn_enabled" {
   default     = false
 }
 
+variable "local_account_disabled" {
+  description = "Disable local admin credentials so access is governed by Azure AD RBAC."
+  type        = bool
+  default     = true
+}
+
 variable "system_node_pool" {
   description = "Configuration for the default system node pool"
   type = object({
@@ -47,7 +60,7 @@ variable "system_node_pool" {
     vm_size                      = string
     node_count                   = number
     subnet_id                    = string
-    enable_auto_scaling          = bool
+    auto_scaling_enabled         = bool
     min_count                    = number
     max_count                    = number
     availability_zones           = list(string)
@@ -55,6 +68,8 @@ variable "system_node_pool" {
     os_disk_type                 = string
     os_disk_size_gb              = number
     ultra_ssd_enabled            = bool
+    enable_host_encryption       = optional(bool, true)
+    max_pods                     = optional(number, 50)
     node_labels                  = map(string)
   })
 }
@@ -67,14 +82,15 @@ variable "node_pools" {
     node_count             = number
     subnet_id              = string
     mode                   = string
-    enable_auto_scaling    = bool
+    auto_scaling_enabled   = bool
     min_count              = number
     max_count              = number
     availability_zones     = list(string)
     os_disk_type           = string
     os_disk_size_gb        = number
     ultra_ssd_enabled      = bool
-    enable_host_encryption = bool
+    enable_host_encryption = optional(bool, true)
+    max_pods               = optional(number, 50)
     node_labels            = map(string)
     node_taints = list(object({
       key    = string
@@ -129,7 +145,27 @@ variable "network_profile" {
       outbound_ports_allocated  = number
       idle_timeout_in_minutes   = number
     }))
+    network_plugin_mode = optional(string, "overlay")
+    network_data_plane  = optional(string, "cilium")
+    pod_cidr            = optional(string, "10.244.0.0/16")
+    pod_cidrs           = optional(list(string))
+    service_cidrs       = optional(list(string))
   })
+
+  validation {
+    condition     = contains(["azure"], lower(var.network_profile.network_plugin))
+    error_message = "network_profile.network_plugin must be 'azure'."
+  }
+
+  validation {
+    condition     = var.network_profile.network_policy == null || contains(["azure", "calico", "cilium"], lower(var.network_profile.network_policy))
+    error_message = "network_profile.network_policy must be one of 'azure', 'calico', or 'cilium'."
+  }
+
+  validation {
+    condition     = var.network_profile.network_data_plane == null || contains(["azure", "cilium"], lower(var.network_profile.network_data_plane))
+    error_message = "network_profile.network_data_plane must be either 'azure' or 'cilium'."
+  }
 }
 
 variable "azure_ad_rbac" {
@@ -198,13 +234,13 @@ variable "maintenance_window" {
   default = null
 }
 
-variable "automatic_channel_upgrade" {
+variable "automatic_upgrade_channel" {
   description = "The automatic upgrade channel for the cluster"
   type        = string
   default     = "patch"
   validation {
-    condition     = contains(["none", "patch", "rapid", "stable", "node-image"], var.automatic_channel_upgrade)
-    error_message = "Invalid automatic_channel_upgrade value."
+    condition     = contains(["none", "patch", "rapid", "stable", "node-image"], var.automatic_upgrade_channel)
+    error_message = "Invalid automatic_upgrade_channel value."
   }
 }
 
@@ -231,6 +267,30 @@ variable "vnet_address_space" {
   description = "Address space for the VNet (required if create_network_resources is true)"
   type        = list(string)
   default     = null
+}
+
+variable "network_contributor_scope_id" {
+  description = "Network scope where the AKS control plane identity receives Network Contributor before cluster creation"
+  type        = string
+  default     = null
+}
+
+variable "assign_network_contributor_role" {
+  description = "Assign Network Contributor to the AKS control plane identity on network_contributor_scope_id. Set this when the network scope is managed outside the module."
+  type        = bool
+  default     = false
+}
+
+variable "private_dns_zone_id" {
+  description = "Private DNS zone ID for private AKS API records. Required when using externally managed private DNS."
+  type        = string
+  default     = null
+}
+
+variable "assign_private_dns_zone_role" {
+  description = "Assign Private DNS Zone Contributor to the AKS control plane identity on private_dns_zone_id. Set this when the private DNS zone is managed outside the module."
+  type        = bool
+  default     = false
 }
 
 # Monitoring-specific variables
@@ -269,6 +329,24 @@ variable "key_vault_purge_protection_enabled" {
   description = "Enable purge protection for Key Vault"
   type        = bool
   default     = true
+}
+
+variable "key_vault_public_network_access_enabled" {
+  description = "Allow public data-plane access to the module-managed Key Vault. Keep disabled unless a documented exception exists."
+  type        = bool
+  default     = false
+}
+
+variable "key_vault_private_endpoint_subnet_id" {
+  description = "Subnet ID for the module-managed Key Vault private endpoint. Required when create_key_vault is true and public access is disabled."
+  type        = string
+  default     = null
+}
+
+variable "key_vault_private_dns_zone_ids" {
+  description = "Private DNS zone IDs to associate with the module-managed Key Vault private endpoint."
+  type        = list(string)
+  default     = []
 }
 
 # Network configuration variables

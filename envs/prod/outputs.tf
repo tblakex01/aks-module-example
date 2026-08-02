@@ -8,6 +8,11 @@ output "cluster_name" {
   value       = module.aks.cluster_name
 }
 
+output "resource_group_name" {
+  description = "The resource group name"
+  value       = azurerm_resource_group.aks.name
+}
+
 output "cluster_fqdn" {
   description = "The FQDN of the Azure Kubernetes Managed Cluster"
   value       = module.aks.cluster_fqdn
@@ -61,6 +66,21 @@ output "subnet_ids" {
   }
 }
 
+output "system_subnet_id" {
+  description = "The ID of the system node subnet"
+  value       = azurerm_subnet.system.id
+}
+
+output "spark_subnet_id" {
+  description = "The ID of the Spark node subnet"
+  value       = azurerm_subnet.spark.id
+}
+
+output "private_dns_zone_id" {
+  description = "The ID of the private DNS zone used by AKS"
+  value       = azurerm_private_dns_zone.aks.id
+}
+
 output "peering_status" {
   description = "VNet peering status"
   value = var.enable_hub_peering ? {
@@ -71,5 +91,5 @@ output "peering_status" {
 
 output "route_table_id" {
   description = "Route table ID for ExpressRoute traffic"
-  value       = azurerm_route_table.aks_expressroute.id
+  value       = var.enable_hub_peering ? azurerm_route_table.aks_expressroute[0].id : null
 }
