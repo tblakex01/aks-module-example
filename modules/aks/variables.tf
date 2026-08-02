@@ -99,34 +99,36 @@ variable "node_pools" {
     }))
     tags = map(string)
     # Spot instance configuration
-    priority        = optional(string, "Regular") # Valid values: "Regular" or "Spot" (case-insensitive)
-    eviction_policy = optional(string, "Delete")  # Valid values: "Delete" or "Deallocate" (case-insensitive, only used when priority is "Spot")
-    spot_max_price  = optional(number, -1)        # Max price for Spot instances (must be -1 or >= 0), -1 uses market price
+    priority        = optional(string, "Regular") # Spot or Regular
+    eviction_policy = optional(string)            # Delete or Deallocate; required for Spot pools
+    spot_max_price  = optional(number, -1)        # Max price for Spot instances, -1 for on-demand price
   }))
   default = {}
 
   validation {
-    condition = length([
-      for k, v in var.node_pools : k
-      if !contains(["regular", "spot"], lower(v.priority))
-    ]) == 0
-    error_message = "Invalid priority values found. ${join(", ", [for k, v in var.node_pools : "Node pool '${k}' has invalid priority '${v.priority}'" if !contains(["regular", "spot"], lower(v.priority))])}. Priority must be either 'Regular' or 'Spot' (case-insensitive)."
+    condition     = alltrue([for _, pool in var.node_pools : contains(["Regular", "Spot"], pool.priority)])
+    error_message = "priority must be either 'Regular' or 'Spot'."
   }
 
   validation {
-    condition = length([
-      for k, v in var.node_pools : k
-      if lower(v.priority) == "spot" && !contains(["delete", "deallocate"], lower(v.eviction_policy))
-    ]) == 0
-    error_message = "Invalid eviction_policy values found. ${join(", ", [for k, v in var.node_pools : "Node pool '${k}' has invalid eviction_policy '${v.eviction_policy}'" if lower(v.priority) == "spot" && !contains(["delete", "deallocate"], lower(v.eviction_policy))])}. When priority is 'Spot', eviction_policy must be either 'Delete' or 'Deallocate' (case-insensitive)."
+    condition = alltrue([
+      for pool in values(var.node_pools) :
+      pool.eviction_policy == null ? true : contains(["Delete", "Deallocate"], pool.eviction_policy)
+    ])
+    error_message = "eviction_policy must be either 'Delete' or 'Deallocate'."
   }
 
   validation {
-    condition = length([
-      for k, v in var.node_pools : k
-      if !(v.spot_max_price == -1 || v.spot_max_price >= 0)
-    ]) == 0
-    error_message = "Invalid spot_max_price values found. ${join(", ", [for k, v in var.node_pools : "Node pool '${k}' has invalid spot_max_price '${v.spot_max_price}'" if !(v.spot_max_price == -1 || v.spot_max_price >= 0)])}. The spot_max_price must be either -1 (market price) or >= 0."
+    condition     = alltrue([for _, pool in var.node_pools : pool.spot_max_price >= -1])
+    error_message = "spot_max_price must be greater than or equal to -1."
+  }
+
+  validation {
+    condition = alltrue([
+      for pool in values(var.node_pools) :
+      pool.priority == "Spot" ? pool.eviction_policy != null : true
+    ])
+    error_message = "eviction_policy must be set when priority is 'Spot'."
   }
 }
 
